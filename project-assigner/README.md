@@ -38,7 +38,7 @@ In order to use this action, create a workflow configuration file (e.g. `issues-
 	    name: Assign an issue to project based on label
 	    steps:
 	      - name: Assign to project
-		uses: alexh97/github-actions/project-assigner@v1.0.0
+		uses: elastic/github-actions/project-assigner@v1.0.0
 		id: project_assigner
 		with:
 		  issue-mappings: '[{"label": "Test", "projectName": "test", "columnId": 1234},
@@ -57,7 +57,7 @@ In order to use this action, create a workflow configuration file (e.g. `issues-
 	    name: Assign a PR to project based on label
 	    steps:
 	      - name: Assign to project
-		uses: alexh97/github-actions/project-assigner@v1.0.0
+		uses: elastic/github-actions/project-assigner@v1.0.0
 		id: project_assigner
 		with:
 		  issue-mappings: '[{"label": "Test", "projectName": "test", "columnId": 1234},
