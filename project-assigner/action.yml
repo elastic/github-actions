@@ -1,0 +1,9 @@
+name: 'Project Assigner'
+description: 'Assigns an issue to a project based on its lable at the time it is opened or labeled'
+inputs:
+  issue-mappings:
+    description: 'A JSON array of objects containing label, projectName, and columnId attributes'
+    required: true
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
