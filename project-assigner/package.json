@@ -1,0 +1,21 @@
+{
+  "name": "project-assigner",
+  "version": "1.0.0",
+  "description": "A GitHub Action that assigns issues and pull request to a GitHub project column when specific label is applied",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elastic/github-actions.git"
+  },
+  "keywords": [],
+  "author": "Alex Holmansky",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@actions/core": "^1.2.0",
+    "@actions/github": "^1.1.0",
+    "lodash": "^4.17.15"
+  }
+}
