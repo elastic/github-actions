@@ -20077,15 +20077,18 @@ async function handleLabeled(octokit, projectName, projectColumnId, labelToMatch
         }
 
         console.log(`Creating a new card for ${state} ${contentType} #${contentId} in project [${projectName}] column ${projectColumnId} mathing label [${labelToMatch}], labeled by ${github.context.payload.sender.login}`);
-        octokit.projects.createCard({
-            column_id: projectColumnId,
-            content_id: contentId,
-            content_type: contentType
-        }).then(function (response) {
+        try {
+            const response = await octokit.projects.createCard({
+                column_id: projectColumnId,
+                content_id: contentId,
+                content_type: contentType
+            });
             console.log(`${contentType} #${contentId} added to project ${projectName} column ${projectColumnId}`);
-        }).catch(function(error) {
+        } catch (error) {
             core.setFailed(`Error adding ${contentType} #${contentId} to project ${projectName} column ${projectColumnId}: ${error.message}`);
-        });
+        };
+    } else {
+        console.log(`No project assignments are configured for label ${labelToMatch}`);
     }
 }
 
@@ -20093,9 +20096,10 @@ async function handleUnlabeled(octokit, projectName, labelToMatch) {
     if (github.context.payload.label.name == labelToMatch) {
         const owner = github.context.payload.repository.owner.login;
         const repo = github.context.payload.repository.name;
-        var query, projectCardsPath;
+        var query, projectCardsPath, contentType;
 
         if (github.context.eventName == "issues") {
+            contentType = 'Issue';
             query = `{
                 repository(owner: "${owner}", name: "${repo}") {
                     issue(number: ${github.context.payload.issue.number}) {
@@ -20116,6 +20120,7 @@ async function handleUnlabeled(octokit, projectName, labelToMatch) {
             projectCardsPath = 'repository.issue.projectCards.edges';
 
         } else if (github.context.eventName == "pull_request") {
+            contentType = 'Pull request';
             query = `{
                 repository(owner: "${owner}", name: "${repo}") {
                     pullRequest(number: ${github.context.payload.pull_request.number}) {
@@ -20147,14 +20152,20 @@ async function handleUnlabeled(octokit, projectName, labelToMatch) {
 
             if (cardToRemove) {
                 const cardId = _.get(cardToRemove, 'node.databaseId');
-                octokit.projects.deleteCard({ card_id: cardId }).then(function(response) {
-                    console.log(`Issue removed from project ${projectName}`);
-                }).catch(function(error) {
-                    core.setFailed(`Error removing issue from project: ${error.message}`);
-                });
+
+                try {
+                    const response = await octokit.projects.deleteCard({ card_id: cardId });
+                    console.log(`${contentType} removed from project ${projectName}`);
+                } catch (error) {
+                    core.setFailed(`Error removing ${contentType} from project: ${error.message}`);
+                };
+            } else {
+                console.log(`No card found in project ${projectName} for a given ${contentType}`);
             }
         }
-    } 
+    } else {
+        console.log(`No project assignments are configured for label ${labelToMatch}`);
+    }
 }
 
 async function run() {
@@ -20167,14 +20178,14 @@ async function run() {
         // console.log(`Event context: ${JSON.stringify(github.context, undefined, 2)}`);
 
         if (github.context.payload.action == "labeled") {
-            issueMappings.forEach(mapping => {
-                handleLabeled(octokit, mapping.projectName, mapping.columnId, mapping.label);
-            });
+            for (const mapping of issueMappings) {
+                await handleLabeled(octokit, mapping.projectName, mapping.columnId, mapping.label);
+            };
             
         } else if (github.context.payload.action == "unlabeled") {
-            issueMappings.forEach(mapping => {
-                handleUnlabeled(octokit, mapping.projectName, mapping.label);
-            });
+            for (const mapping of issueMappings) {
+                await handleUnlabeled(octokit, mapping.projectName, mapping.label);
+            };
         }
     } catch (error) {
         context = JSON.stringify(github.context, undefined, 2);
