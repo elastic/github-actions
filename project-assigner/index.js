@@ -28,8 +28,6 @@ async function handleLabeled(octokit, projectName, projectColumnId, labelToMatch
         } catch (error) {
             core.setFailed(`Error adding ${contentType} #${contentId} to project ${projectName} column ${projectColumnId}: ${error.message}`);
         };
-    } else {
-        console.log(`No project assignments are configured for label ${labelToMatch}`);
     }
 }
 
@@ -104,8 +102,6 @@ async function handleUnlabeled(octokit, projectName, labelToMatch) {
                 console.log(`No card found in project ${projectName} for a given ${contentType}`);
             }
         }
-    } else {
-        console.log(`No project assignments are configured for label ${labelToMatch}`);
     }
 }
 
