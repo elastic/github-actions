@@ -8,7 +8,7 @@ jobs:
     name: Assign a PR to project based on label
     steps:
       - name: Assign to project
-        uses: elastic/github-actions/project-assigner@3b2bc62121768deb4011706cc2a61d9044c07faa
+        uses: elastic/github-actions/project-assigner@4ff5231ba834c0eaa99a90ed5ac69fcb64208b81
         id: project_assigner
         with:
           issue-mappings: |
