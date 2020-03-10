@@ -20116,10 +20116,10 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
             }
             
             if (targetColumnId) {
-                var mutation = `mutation {
+                var mutation = `mutation($targetColumnId: ID!, contentId: ID!) {
                     addProjectCard(input: {
-                        projectColumnId: ${targetColumnId},
-                        contentId: ${contentId}
+                        projectColumnId: $targetColumnId,
+                        contentId: $contentId
                     }) {
                         cardEdge {
                         node {
@@ -20129,7 +20129,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
                     }
                 }`;
 
-                await octokit.graphql(mutation);
+                await octokit.graphql(mutation, {targetColumnId, contentId});
             }
         } catch (error) {
             core.setFailed(`Error adding ${contentType} to project ${projectNumber} column ${columnName}: ${error.message}`);
@@ -20200,12 +20200,12 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
 
                 try {
                     //const response = await octokit.projects.deleteCard({ card_id: cardId });
-                    const mutation = `mutation {
-                        deleteProjectCard(input: {cardId: ${cardId}}) {
+                    const mutation = `mutation($cardId: ID!) {
+                        deleteProjectCard(input: {cardId: $cardId}) {
                             deletedCardId
-                          }
+                        }
                     }`;
-                    await octokit.graphql(mutation);
+                    await octokit.graphql(mutation, cardId);
                     console.log(`${contentType} removed from project ${projectName}`);
                 } catch (error) {
                     core.setFailed(`Error removing ${contentType} from project: ${error.message}`);
