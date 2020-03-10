@@ -20078,7 +20078,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
             core.setFailed(`Unrecognized event: ${github.context.eventName}`);
         }
 
-        console.log(`Creating a new card for ${state} ${contentType} in project [${projectNumber}] column ${columnName} mathing label [${labelToMatch}], labeled by ${github.context.payload.sender.login}`);
+        console.log(`Creating a new card for ${state} ${contentType} [${contentId}] in project [${projectNumber}] column [${columnName}] matching label [${labelToMatch}], labeled by ${github.context.payload.sender.login}`);
         // try {
         //     const response = await octokit.projects.createCard({
         //         column_id: projectColumnId,
@@ -20116,7 +20116,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
             }
             
             if (targetColumnId) {
-                var mutation = `mutation($targetColumnId: ID!, contentId: ID!) {
+                var mutation = `mutation($targetColumnId: ID!, $contentId: ID!) {
                     addProjectCard(input: {
                         projectColumnId: $targetColumnId,
                         contentId: $contentId
