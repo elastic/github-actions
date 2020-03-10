@@ -11,7 +11,7 @@ jobs:
         uses: elastic/github-actions/project-assigner@v1.0.3
         id: project_assigner
         with:
-          issue-mappings: '[{"label": "wf_test", "projectName": "Workflow Test", "columnId": 8242809}]'
+          issue-mappings: '[{"label": "wf_test", "projectNumber": 1, "columnName": "To do"}]'
           ghToken: ${{ secrets.PROJECT_ASSIGNER_TEST_TOKEN }}
 
 
