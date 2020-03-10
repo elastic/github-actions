@@ -147,12 +147,12 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
                         }
                     }`;
                     await octokit.graphql(mutation, cardId);
-                    console.log(`${contentType} removed from project ${projectName}`);
+                    console.log(`${contentType} removed from project ${projectNumber}`);
                 } catch (error) {
                     core.setFailed(`Error removing ${contentType} from project: ${error.message}`);
                 };
             } else {
-                console.log(`No card found in project ${projectName} for a given ${contentType}`);
+                console.log(`No card found in project ${projectNumber} for a given ${contentType}`);
             }
         }
     }
