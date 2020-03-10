@@ -57,7 +57,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
             }
             
             if (targetColumnId) {
-                var mutation = `{
+                var mutation = `mutation {
                     addProjectCard(input: {
                         projectColumnId: ${targetColumnId},
                         contentId: ${contentId}
@@ -141,7 +141,7 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
 
                 try {
                     //const response = await octokit.projects.deleteCard({ card_id: cardId });
-                    const mutation = `{
+                    const mutation = `mutation {
                         deleteProjectCard(input: {cardId: ${cardId}}) {
                             deletedCardId
                           }
