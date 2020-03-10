@@ -6,12 +6,10 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
     if (github.context.payload.label.name == labelToMatch) {
         var contentId, contentType, state;
         if (github.context.eventName == "issues") {
-            //contentId = github.context.payload.issue.id;
             contentId = github.context.payload.issue.node_id;
             state = github.context.payload.issue.state;
             contentType = 'Issue';
         } else if (github.context.eventName == "pull_request") {
-            //contentId = github.context.payload.pull_request.id;
             contentId = github.context.payload.pull_request.node_id;
             state = github.context.payload.pull_request.state;
             contentType = 'PullRequest';
@@ -20,16 +18,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
         }
 
         console.log(`Creating a new card for ${state} ${contentType} [${contentId}] in project [${projectNumber}] column [${columnName}] matching label [${labelToMatch}], labeled by ${github.context.payload.sender.login}`);
-        // try {
-        //     const response = await octokit.projects.createCard({
-        //         column_id: projectColumnId,
-        //         content_id: contentId,
-        //         content_type: contentType
-        //     });
-        //     console.log(`${contentType} #${contentId} added to project ${projectName} column ${projectColumnId}`);
-        // } catch (error) {
-        //     core.setFailed(`Error adding ${contentType} #${contentId} to project ${projectName} column ${projectColumnId}: ${error.message}`);
-        // };
+        
         try {
             const query = `{
                 repository(name: "github-actions", owner: "elastic") {
@@ -140,7 +129,6 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
                 const cardId = _.get(cardToRemove, 'node.id');
 
                 try {
-                    //const response = await octokit.projects.deleteCard({ card_id: cardId });
                     const mutation = `mutation($cardId: ID!) {
                         deleteProjectCard(input: {cardId: $cardId}) {
                             deletedCardId
