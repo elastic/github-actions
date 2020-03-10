@@ -10,3 +10,5 @@ To use these actions in your GitHub workfkflows, include them in the workflow co
 	      issue-mappings: '[{"label": "Test", "projectName": "test", "columnId": 1234},
 	        {"label": "bug", "projectName": "test2", "columnId": 5678}]'
 	      ghToken: ${{ secrets.GITHUB_TOKEN }}
+
+Make sure that the token you're using has sufficient permissions to perform actions you're trying to use in your rpository.

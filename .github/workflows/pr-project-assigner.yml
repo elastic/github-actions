@@ -13,7 +13,7 @@ jobs:
         with:
           issue-mappings: |
             [
-              {"label": "wf_test", "projectName": "Workflow Test", "columnId": 8242810}
+              {"label": "wf_test", "projectNumber": 1, "columnName": "In progress"}
             ]
           ghToken: ${{ secrets.PROJECT_TEST_ASSIGNER_TOKEN }}
 
