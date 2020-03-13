@@ -8,7 +8,7 @@ jobs:
     name: Assign issue or PR to project based on label
     steps:
       - name: Assign to project
-        uses: elastic/github-actions/project-assigner@f12c214aecfe5f114c5d3fe691519a78db40643d
+        uses: elastic/github-actions/project-assigner@829f3782218ec6d8b7fcf2b075f60f220b88d7fc
         id: project_assigner
         with:
           issue-mappings: '[{"label": "wf_test", "projectNumber": 1, "columnName": "To do"}]'
