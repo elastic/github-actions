@@ -20172,7 +20172,7 @@ module.exports = options => {
 
 const core = __webpack_require__(904);
 const github = __webpack_require__(751);
-const graphql  = __webpack_require__(37);
+const { graphql } = __webpack_require__(37);
 const _ = __webpack_require__(523);
 
 async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
