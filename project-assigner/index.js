@@ -1,6 +1,6 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
-const graphql  = require("@octokit/graphql");
+const { graphql } = require("@octokit/graphql");
 const _ = require('lodash');
 
 async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
