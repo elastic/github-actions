@@ -102,49 +102,6 @@ function hasLastPage (link) {
 
 /***/ }),
 
-/***/ 13:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-module.exports = graphql
-
-const GraphqlError = __webpack_require__(218)
-
-const NON_VARIABLE_OPTIONS = ['method', 'baseUrl', 'url', 'headers', 'request', 'query']
-
-function graphql (request, query, options) {
-  if (typeof query === 'string') {
-    options = Object.assign({ query }, options)
-  } else {
-    options = query
-  }
-
-  const requestOptions = Object.keys(options).reduce((result, key) => {
-    if (NON_VARIABLE_OPTIONS.includes(key)) {
-      result[key] = options[key]
-      return result
-    }
-
-    if (!result.variables) {
-      result.variables = {}
-    }
-
-    result.variables[key] = options[key]
-    return result
-  }, {})
-
-  return request(requestOptions)
-    .then(response => {
-      if (response.data.errors) {
-        throw new GraphqlError(requestOptions, response)
-      }
-
-      return response.data.data
-    })
-}
-
-
-/***/ }),
-
 /***/ 17:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -389,6 +346,99 @@ var pump = function () {
 }
 
 module.exports = pump
+
+
+/***/ }),
+
+/***/ 37:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+var request = __webpack_require__(506);
+var universalUserAgent = __webpack_require__(507);
+
+const VERSION = "4.3.1";
+
+class GraphqlError extends Error {
+  constructor(request, response) {
+    const message = response.data.errors[0].message;
+    super(message);
+    Object.assign(this, response.data);
+    this.name = "GraphqlError";
+    this.request = request; // Maintains proper stack trace (only available on V8)
+
+    /* istanbul ignore next */
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor);
+    }
+  }
+
+}
+
+const NON_VARIABLE_OPTIONS = ["method", "baseUrl", "url", "headers", "request", "query"];
+function graphql(request, query, options) {
+  options = typeof query === "string" ? options = Object.assign({
+    query
+  }, options) : options = query;
+  const requestOptions = Object.keys(options).reduce((result, key) => {
+    if (NON_VARIABLE_OPTIONS.includes(key)) {
+      result[key] = options[key];
+      return result;
+    }
+
+    if (!result.variables) {
+      result.variables = {};
+    }
+
+    result.variables[key] = options[key];
+    return result;
+  }, {});
+  return request(requestOptions).then(response => {
+    if (response.data.errors) {
+      throw new GraphqlError(requestOptions, {
+        data: response.data
+      });
+    }
+
+    return response.data.data;
+  });
+}
+
+function withDefaults(request$1, newDefaults) {
+  const newRequest = request$1.defaults(newDefaults);
+
+  const newApi = (query, options) => {
+    return graphql(newRequest, query, options);
+  };
+
+  return Object.assign(newApi, {
+    defaults: withDefaults.bind(null, newRequest),
+    endpoint: request.request.endpoint
+  });
+}
+
+const graphql$1 = withDefaults(request.request, {
+  headers: {
+    "user-agent": `octokit-graphql.js/${VERSION} ${universalUserAgent.getUserAgent()}`
+  },
+  method: "POST",
+  url: "/graphql"
+});
+function withCustomRequest(customRequest) {
+  return withDefaults(customRequest, {
+    method: "POST",
+    url: "/graphql"
+  });
+}
+
+exports.graphql = graphql$1;
+exports.withCustomRequest = withCustomRequest;
+//# sourceMappingURL=index.js.map
 
 
 /***/ }),
@@ -671,13 +721,6 @@ function parse(command, args, options) {
 
 module.exports = parse;
 
-
-/***/ }),
-
-/***/ 110:
-/***/ (function(module) {
-
-module.exports = {"_from":"@octokit/graphql@^2.0.1","_id":"@octokit/graphql@2.1.3","_inBundle":false,"_integrity":"sha512-XoXJqL2ondwdnMIW3wtqJWEwcBfKk37jO/rYkoxNPEVeLBDGsGO1TCWggrAlq3keGt/O+C/7VepXnukUxwt5vA==","_location":"/@octokit/graphql","_phantomChildren":{},"_requested":{"type":"range","registry":true,"raw":"@octokit/graphql@^2.0.1","name":"@octokit/graphql","escapedName":"@octokit%2fgraphql","scope":"@octokit","rawSpec":"^2.0.1","saveSpec":null,"fetchSpec":"^2.0.1"},"_requiredBy":["/@actions/github"],"_resolved":"https://registry.npmjs.org/@octokit/graphql/-/graphql-2.1.3.tgz","_shasum":"60c058a0ed5fa242eca6f938908d95fd1a2f4b92","_spec":"@octokit/graphql@^2.0.1","_where":"/Users/alex/Development/github-actions/project-assigner/node_modules/@actions/github","author":{"name":"Gregor Martynus","url":"https://github.com/gr2m"},"bugs":{"url":"https://github.com/octokit/graphql.js/issues"},"bundleDependencies":false,"bundlesize":[{"path":"./dist/octokit-graphql.min.js.gz","maxSize":"5KB"}],"dependencies":{"@octokit/request":"^5.0.0","universal-user-agent":"^2.0.3"},"deprecated":false,"description":"GitHub GraphQL API client for browsers and Node","devDependencies":{"chai":"^4.2.0","compression-webpack-plugin":"^2.0.0","coveralls":"^3.0.3","cypress":"^3.1.5","fetch-mock":"^7.3.1","mkdirp":"^0.5.1","mocha":"^6.0.0","npm-run-all":"^4.1.3","nyc":"^14.0.0","semantic-release":"^15.13.3","simple-mock":"^0.8.0","standard":"^12.0.1","webpack":"^4.29.6","webpack-bundle-analyzer":"^3.1.0","webpack-cli":"^3.2.3"},"files":["lib"],"homepage":"https://github.com/octokit/graphql.js#readme","keywords":["octokit","github","api","graphql"],"license":"MIT","main":"index.js","name":"@octokit/graphql","publishConfig":{"access":"public"},"release":{"publish":["@semantic-release/npm",{"path":"@semantic-release/github","assets":["dist/*","!dist/*.map.gz"]}]},"repository":{"type":"git","url":"git+https://github.com/octokit/graphql.js.git"},"scripts":{"build":"npm-run-all build:*","build:development":"webpack --mode development --entry . --output-library=octokitGraphql --output=./dist/octokit-graphql.js --profile --json > dist/bundle-stats.json","build:production":"webpack --mode production --entry . --plugin=compression-webpack-plugin --output-library=octokitGraphql --output-path=./dist --output-filename=octokit-graphql.min.js --devtool source-map","bundle-report":"webpack-bundle-analyzer dist/bundle-stats.json --mode=static --no-open --report dist/bundle-report.html","coverage":"nyc report --reporter=html && open coverage/index.html","coverage:upload":"nyc report --reporter=text-lcov | coveralls","prebuild":"mkdirp dist/","pretest":"standard","test":"nyc mocha test/*-test.js","test:browser":"cypress run --browser chrome"},"standard":{"globals":["describe","before","beforeEach","afterEach","after","it","expect"]},"version":"2.1.3"};
 
 /***/ }),
 
@@ -1171,23 +1214,42 @@ function octokitRegisterEndpoints(octokit) {
 
 /***/ }),
 
-/***/ 218:
-/***/ (function(module) {
+/***/ 213:
+/***/ (function(module, __unusedexports, __webpack_require__) {
 
-module.exports = class GraphqlError extends Error {
-  constructor (request, response) {
-    const message = response.data.errors[0].message
-    super(message)
+module.exports = withDefaults
 
-    Object.assign(this, response.data)
-    this.name = 'GraphqlError'
-    this.request = request
+const graphql = __webpack_require__(458)
 
-    // Maintains proper stack trace (only available on V8)
-    /* istanbul ignore next */
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor)
+function withDefaults (request, newDefaults) {
+  const newRequest = request.defaults(newDefaults)
+  const newApi = function (query, options) {
+    return graphql(newRequest, query, options)
+  }
+
+  newApi.defaults = withDefaults.bind(null, newRequest)
+  return newApi
+}
+
+
+/***/ }),
+
+/***/ 215:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+module.exports = getUserAgentNode
+
+const osName = __webpack_require__(971)
+
+function getUserAgentNode () {
+  try {
+    return `Node.js/${process.version.substr(1)} (${osName()}; ${process.arch})`
+  } catch (error) {
+    if (/wmic os get Caption/.test(error.message)) {
+      return 'Windows <version undetectable>'
     }
+
+    throw error
   }
 }
 
@@ -2229,28 +2291,6 @@ module.exports.shellSync = (cmd, opts) => handleShell(module.exports.sync, cmd, 
 
 /***/ }),
 
-/***/ 402:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const { request } = __webpack_require__(506)
-const getUserAgent = __webpack_require__(780)
-
-const version = __webpack_require__(110).version
-const userAgent = `octokit-graphql.js/${version} ${getUserAgent()}`
-
-const withDefaults = __webpack_require__(714)
-
-module.exports = withDefaults(request, {
-  method: 'POST',
-  url: '/graphql',
-  headers: {
-    'user-agent': userAgent
-  }
-})
-
-
-/***/ }),
-
 /***/ 413:
 /***/ (function(module) {
 
@@ -2468,6 +2508,49 @@ function octokitDebug(octokit) {
         throw error;
       });
   });
+}
+
+
+/***/ }),
+
+/***/ 458:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+module.exports = graphql
+
+const GraphqlError = __webpack_require__(927)
+
+const NON_VARIABLE_OPTIONS = ['method', 'baseUrl', 'url', 'headers', 'request', 'query']
+
+function graphql (request, query, options) {
+  if (typeof query === 'string') {
+    options = Object.assign({ query }, options)
+  } else {
+    options = query
+  }
+
+  const requestOptions = Object.keys(options).reduce((result, key) => {
+    if (NON_VARIABLE_OPTIONS.includes(key)) {
+      result[key] = options[key]
+      return result
+    }
+
+    if (!result.variables) {
+      result.variables = {}
+    }
+
+    result.variables[key] = options[key]
+    return result
+  }, {})
+
+  return request(requestOptions)
+    .then(response => {
+      if (response.data.errors) {
+        throw new GraphqlError(requestOptions, response)
+      }
+
+      return response.data.data
+    })
 }
 
 
@@ -2765,6 +2848,36 @@ const request = withDefaults(endpoint.endpoint, {
 });
 
 exports.request = request;
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 507:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var osName = _interopDefault(__webpack_require__(971));
+
+function getUserAgent() {
+  try {
+    return `Node.js/${process.version.substr(1)} (${osName()}; ${process.arch})`;
+  } catch (error) {
+    if (/wmic os get Caption/.test(error.message)) {
+      return "Windows <version undetectable>";
+    }
+
+    throw error;
+  }
+}
+
+exports.getUserAgent = getUserAgent;
 //# sourceMappingURL=index.js.map
 
 
@@ -20059,10 +20172,13 @@ module.exports = options => {
 
 const core = __webpack_require__(904);
 const github = __webpack_require__(751);
+const graphql  = __webpack_require__(37);
 const _ = __webpack_require__(523);
 
 async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
     if (github.context.payload.label.name == labelToMatch) {
+        const owner = github.context.payload.repository.owner.login;
+        const repo = github.context.payload.repository.name;
         var contentId, contentType, state;
         if (github.context.eventName == "issues") {
             //contentId = github.context.payload.issue.id;
@@ -20091,7 +20207,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
         // };
         try {
             const query = `{
-                repository(name: "github-actions", owner: "elastic") {
+                repository(name: ${repo}, owner: ${owner}) {
                     project(number: ${projectNumber}) {
                     columns(first: 50) {
                         nodes {
@@ -20103,7 +20219,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
                 }
             }`;
 
-            const response = await octokit.graphql(query);
+            const response = await octokit(query);
             const columns = _.get(response, 'repository.project.columns.nodes');
             var targetColumnId;
             if (columns) {
@@ -20129,7 +20245,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
                     }
                 }`;
 
-                await octokit.graphql(mutation, {targetColumnId, contentId});
+                await octokit(mutation, {targetColumnId, contentId});
             }
         } catch (error) {
             core.setFailed(`Error adding ${contentType} to project ${projectNumber} column ${columnName}: ${error.message}`);
@@ -20186,7 +20302,7 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
             projectCardsPath = 'repository.pullRequest.projectCards.edges';
         }
 
-        const response = await octokit.graphql(query);
+        const response = await octokit(query);
         
         const projectCards = _.get(response, projectCardsPath);
 
@@ -20205,7 +20321,7 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
                             deletedCardId
                         }
                     }`;
-                    await octokit.graphql(mutation, cardId);
+                    await octokit(mutation, cardId);
                     console.log(`${contentType} removed from project ${projectNumber}`);
                 } catch (error) {
                     core.setFailed(`Error removing ${contentType} from project: ${error.message}`);
@@ -20219,12 +20335,14 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
 
 async function run() {
     const ghToken = core.getInput('ghToken');
-    const octokit = new github.GitHub(ghToken);
+    const octokit = graphql.defaults({
+        headers: {
+          authorization: `Bearer ${ghToken}`
+        }
+    });
 
     try {
         const issueMappings = JSON.parse(core.getInput('issue-mappings'));
-
-        // console.log(`Event context: ${JSON.stringify(github.context, undefined, 2)}`);
 
         if (github.context.payload.action == "labeled") {
             for (const mapping of issueMappings) {
@@ -23243,26 +23361,6 @@ exports.getUserAgent = getUserAgent;
 
 /***/ }),
 
-/***/ 714:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-module.exports = withDefaults
-
-const graphql = __webpack_require__(13)
-
-function withDefaults (request, newDefaults) {
-  const newRequest = request.defaults(newDefaults)
-  const newApi = function (query, options) {
-    return graphql(newRequest, query, options)
-  }
-
-  newApi.defaults = withDefaults.bind(null, newRequest)
-  return newApi
-}
-
-
-/***/ }),
-
 /***/ 717:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -24358,7 +24456,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 // Originally pulled from https://github.com/JasonEtco/actions-toolkit/blob/master/src/github.ts
-const graphql_1 = __webpack_require__(402);
+const graphql_1 = __webpack_require__(771);
 const rest_1 = __importDefault(__webpack_require__(46));
 const Context = __importStar(__webpack_require__(758));
 // We need this in order to extend Octokit
@@ -26086,24 +26184,24 @@ module.exports = require("zlib");
 
 /***/ }),
 
-/***/ 780:
+/***/ 771:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-module.exports = getUserAgentNode
+const { request } = __webpack_require__(506)
+const getUserAgent = __webpack_require__(215)
 
-const osName = __webpack_require__(971)
+const version = __webpack_require__(806).version
+const userAgent = `octokit-graphql.js/${version} ${getUserAgent()}`
 
-function getUserAgentNode () {
-  try {
-    return `Node.js/${process.version.substr(1)} (${osName()}; ${process.arch})`
-  } catch (error) {
-    if (/wmic os get Caption/.test(error.message)) {
-      return 'Windows <version undetectable>'
-    }
+const withDefaults = __webpack_require__(213)
 
-    throw error
+module.exports = withDefaults(request, {
+  method: 'POST',
+  url: '/graphql',
+  headers: {
+    'user-agent': userAgent
   }
-}
+})
 
 
 /***/ }),
@@ -27687,6 +27785,13 @@ module.exports.MaxBufferError = MaxBufferError;
 
 /***/ }),
 
+/***/ 806:
+/***/ (function(module) {
+
+module.exports = {"_from":"@octokit/graphql@^2.0.1","_id":"@octokit/graphql@2.1.3","_inBundle":false,"_integrity":"sha512-XoXJqL2ondwdnMIW3wtqJWEwcBfKk37jO/rYkoxNPEVeLBDGsGO1TCWggrAlq3keGt/O+C/7VepXnukUxwt5vA==","_location":"/@actions/github/@octokit/graphql","_phantomChildren":{},"_requested":{"type":"range","registry":true,"raw":"@octokit/graphql@^2.0.1","name":"@octokit/graphql","escapedName":"@octokit%2fgraphql","scope":"@octokit","rawSpec":"^2.0.1","saveSpec":null,"fetchSpec":"^2.0.1"},"_requiredBy":["/@actions/github"],"_resolved":"https://registry.npmjs.org/@octokit/graphql/-/graphql-2.1.3.tgz","_shasum":"60c058a0ed5fa242eca6f938908d95fd1a2f4b92","_spec":"@octokit/graphql@^2.0.1","_where":"/Users/alex/Development/elastic/github-actions-1/project-assigner/node_modules/@actions/github","author":{"name":"Gregor Martynus","url":"https://github.com/gr2m"},"bugs":{"url":"https://github.com/octokit/graphql.js/issues"},"bundleDependencies":false,"bundlesize":[{"path":"./dist/octokit-graphql.min.js.gz","maxSize":"5KB"}],"dependencies":{"@octokit/request":"^5.0.0","universal-user-agent":"^2.0.3"},"deprecated":false,"description":"GitHub GraphQL API client for browsers and Node","devDependencies":{"chai":"^4.2.0","compression-webpack-plugin":"^2.0.0","coveralls":"^3.0.3","cypress":"^3.1.5","fetch-mock":"^7.3.1","mkdirp":"^0.5.1","mocha":"^6.0.0","npm-run-all":"^4.1.3","nyc":"^14.0.0","semantic-release":"^15.13.3","simple-mock":"^0.8.0","standard":"^12.0.1","webpack":"^4.29.6","webpack-bundle-analyzer":"^3.1.0","webpack-cli":"^3.2.3"},"files":["lib"],"homepage":"https://github.com/octokit/graphql.js#readme","keywords":["octokit","github","api","graphql"],"license":"MIT","main":"index.js","name":"@octokit/graphql","publishConfig":{"access":"public"},"release":{"publish":["@semantic-release/npm",{"path":"@semantic-release/github","assets":["dist/*","!dist/*.map.gz"]}]},"repository":{"type":"git","url":"git+https://github.com/octokit/graphql.js.git"},"scripts":{"build":"npm-run-all build:*","build:development":"webpack --mode development --entry . --output-library=octokitGraphql --output=./dist/octokit-graphql.js --profile --json > dist/bundle-stats.json","build:production":"webpack --mode production --entry . --plugin=compression-webpack-plugin --output-library=octokitGraphql --output-path=./dist --output-filename=octokit-graphql.min.js --devtool source-map","bundle-report":"webpack-bundle-analyzer dist/bundle-stats.json --mode=static --no-open --report dist/bundle-report.html","coverage":"nyc report --reporter=html && open coverage/index.html","coverage:upload":"nyc report --reporter=text-lcov | coveralls","prebuild":"mkdirp dist/","pretest":"standard","test":"nyc mocha test/*-test.js","test:browser":"cypress run --browser chrome"},"standard":{"globals":["describe","before","beforeEach","afterEach","after","it","expect"]},"version":"2.1.3"};
+
+/***/ }),
+
 /***/ 835:
 /***/ (function(module) {
 
@@ -28320,6 +28425,29 @@ module.exports = function (str) {
 		bin + (arg ? ' ' + arg : '')
 	);
 };
+
+
+/***/ }),
+
+/***/ 927:
+/***/ (function(module) {
+
+module.exports = class GraphqlError extends Error {
+  constructor (request, response) {
+    const message = response.data.errors[0].message
+    super(message)
+
+    Object.assign(this, response.data)
+    this.name = 'GraphqlError'
+    this.request = request
+
+    // Maintains proper stack trace (only available on V8)
+    /* istanbul ignore next */
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor)
+    }
+  }
+}
 
 
 /***/ }),
