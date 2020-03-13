@@ -1,9 +1,12 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
+const graphql  = require("@octokit/graphql");
 const _ = require('lodash');
 
 async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
     if (github.context.payload.label.name == labelToMatch) {
+        const owner = github.context.payload.repository.owner.login;
+        const repo = github.context.payload.repository.name;
         var contentId, contentType, state;
         if (github.context.eventName == "issues") {
             //contentId = github.context.payload.issue.id;
@@ -32,7 +35,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
         // };
         try {
             const query = `{
-                repository(name: "github-actions", owner: "elastic") {
+                repository(name: ${repo}, owner: ${owner}) {
                     project(number: ${projectNumber}) {
                     columns(first: 50) {
                         nodes {
@@ -44,7 +47,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
                 }
             }`;
 
-            const response = await octokit.graphql(query);
+            const response = await octokit(query);
             const columns = _.get(response, 'repository.project.columns.nodes');
             var targetColumnId;
             if (columns) {
@@ -70,7 +73,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
                     }
                 }`;
 
-                await octokit.graphql(mutation, {targetColumnId, contentId});
+                await octokit(mutation, {targetColumnId, contentId});
             }
         } catch (error) {
             core.setFailed(`Error adding ${contentType} to project ${projectNumber} column ${columnName}: ${error.message}`);
@@ -127,7 +130,7 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
             projectCardsPath = 'repository.pullRequest.projectCards.edges';
         }
 
-        const response = await octokit.graphql(query);
+        const response = await octokit(query);
         
         const projectCards = _.get(response, projectCardsPath);
 
@@ -146,7 +149,7 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
                             deletedCardId
                         }
                     }`;
-                    await octokit.graphql(mutation, cardId);
+                    await octokit(mutation, cardId);
                     console.log(`${contentType} removed from project ${projectNumber}`);
                 } catch (error) {
                     core.setFailed(`Error removing ${contentType} from project: ${error.message}`);
@@ -160,12 +163,14 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
 
 async function run() {
     const ghToken = core.getInput('ghToken');
-    const octokit = new github.GitHub(ghToken);
+    const octokit = graphql.defaults({
+        headers: {
+          authorization: `Bearer ${ghToken}`
+        }
+    });
 
     try {
         const issueMappings = JSON.parse(core.getInput('issue-mappings'));
-
-        // console.log(`Event context: ${JSON.stringify(github.context, undefined, 2)}`);
 
         if (github.context.payload.action == "labeled") {
             for (const mapping of issueMappings) {
