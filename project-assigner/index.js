@@ -9,12 +9,10 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
         const repo = github.context.payload.repository.name;
         var contentId, contentType, state;
         if (github.context.eventName == "issues") {
-            //contentId = github.context.payload.issue.id;
             contentId = github.context.payload.issue.node_id;
             state = github.context.payload.issue.state;
             contentType = 'Issue';
         } else if (github.context.eventName == "pull_request") {
-            //contentId = github.context.payload.pull_request.id;
             contentId = github.context.payload.pull_request.node_id;
             state = github.context.payload.pull_request.state;
             contentType = 'PullRequest';
@@ -22,31 +20,23 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
             core.setFailed(`Unrecognized event: ${github.context.eventName}`);
         }
 
-        console.log(`Creating a new card for ${state} ${contentType} [${contentId}] in project [${projectNumber}] column [${columnName}] matching label [${labelToMatch}], labeled by ${github.context.payload.sender.login}`);
-        // try {
-        //     const response = await octokit.projects.createCard({
-        //         column_id: projectColumnId,
-        //         content_id: contentId,
-        //         content_type: contentType
-        //     });
-        //     console.log(`${contentType} #${contentId} added to project ${projectName} column ${projectColumnId}`);
-        // } catch (error) {
-        //     core.setFailed(`Error adding ${contentType} #${contentId} to project ${projectName} column ${projectColumnId}: ${error.message}`);
-        // };
+        console.log(`Creating a new card for ${state} ${contentType} [${contentId}] in project [${projectNumber}] column [${columnName}] matching label [${labelToMatch}], labeled by ${owner} of repo ${repo}`);
+
         try {
             const query = `{
-                repository(name: ${repo}, owner: ${owner}) {
+                repository(name: "${repo}", owner: "${owner}") {
                     project(number: ${projectNumber}) {
-                    columns(first: 50) {
-                        nodes {
-                        name,
-                        id
+                        columns(first: 50) {
+                            nodes {
+                                name,
+                                id
+                            }
                         }
-                    }
                     }
                 }
             }`;
 
+            console.log(`Query for project columns:\n ${query}`)
             const response = await octokit(query);
             const columns = _.get(response, 'repository.project.columns.nodes');
             var targetColumnId;
@@ -57,23 +47,27 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
                 if (targetColumn) {
                     targetColumnId = _.get(targetColumn, 'id');
                 }
+            } else {
+                core.setFailed(`Error adding ${contentType} to project ${projectNumber}: could not retrieve project columns - make sure the project number is correctly configured!`);
             }
             
             if (targetColumnId) {
-                var mutation = `mutation($targetColumnId: ID!, $contentId: ID!) {
-                    addProjectCard(input: {
-                        projectColumnId: $targetColumnId,
-                        contentId: $contentId
-                    }) {
-                        cardEdge {
-                        node {
-                            id
+                console.log(`Target column ID is ${targetColumnId}`);
+                const mutation = `
+                    mutation {
+                        addProjectCard(input: { projectColumnId: "${targetColumnId}", contentId: "${contentId}" }) {
+                            cardEdge {
+                                node {
+                                    id
+                                }
+                            }
                         }
-                        }
-                    }
-                }`;
-
-                await octokit(mutation, {targetColumnId, contentId});
+                    }`;
+                
+                console.log(`Mutation: ${mutation}`);
+                await octokit(mutation);
+            } else {
+                core.setFailed(`Error adding ${contentType} to project ${projectNumber}: column "${columnName}" was not found`);
             }
         } catch (error) {
             core.setFailed(`Error adding ${contentType} to project ${projectNumber} column ${columnName}: ${error.message}`);
@@ -130,6 +124,8 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
             projectCardsPath = 'repository.pullRequest.projectCards.edges';
         }
 
+        console.log(`Query for project cards:\n${query}`);
+
         const response = await octokit(query);
         
         const projectCards = _.get(response, projectCardsPath);
@@ -143,13 +139,13 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
                 const cardId = _.get(cardToRemove, 'node.id');
 
                 try {
-                    //const response = await octokit.projects.deleteCard({ card_id: cardId });
-                    const mutation = `mutation($cardId: ID!) {
-                        deleteProjectCard(input: {cardId: $cardId}) {
+                    const mutation = `mutation {
+                        deleteProjectCard(input: {cardId: "${cardId}"}) {
                             deletedCardId
                         }
                     }`;
-                    await octokit(mutation, cardId);
+                    console.log(`Card removal mutation:\n${mutation}`);
+                    await octokit(mutation);
                     console.log(`${contentType} removed from project ${projectNumber}`);
                 } catch (error) {
                     core.setFailed(`Error removing ${contentType} from project: ${error.message}`);
@@ -157,6 +153,8 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
             } else {
                 console.log(`No card found in project ${projectNumber} for a given ${contentType}`);
             }
+        } else {
+            core.setFailed(`Unable to retrieve cards for project ${projectNumber} - make sure it is configured correctly!`);
         }
     }
 }
