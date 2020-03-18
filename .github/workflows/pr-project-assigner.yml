@@ -15,5 +15,6 @@ jobs:
             [
               {"label": "wf_test", "projectNumber": 1, "columnName": "In progress"}
             ]
-          ghToken: ${{ secrets.PROJECT_ASSIGNER_TEST_TOKEN }}
+          #ghToken: ${{ secrets.PROJECT_ASSIGNER_TEST_TOKEN }}
+          ghToken: ${{ secrets.GITHUB_TOKEN }}
 
