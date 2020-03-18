@@ -20192,6 +20192,13 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
             core.setFailed(`Unrecognized event: ${github.context.eventName}`);
         }
 
+        // See if the issue or PR is already in the project
+        const existingCardId = await findProjectCardId();
+        if (existingCardId) {
+            console.log(`Card already exists in project ${projectNumber} for ${contentType} ${contentId}`);
+            return;
+        }
+
         console.log(`Creating a new card for ${state} ${contentType} [${contentId}] in project [${projectNumber}] column [${columnName}] matching label [${labelToMatch}], labeled by ${owner} of repo ${repo}`);
 
         try {
@@ -20321,7 +20328,7 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
                     console.log(`${contentType} removed from project ${projectNumber}`);
                 } catch (error) {
                     core.setFailed(`Error removing ${contentType} from project: ${error.message}`);
-                };
+                }
             } else {
                 console.log(`No card found in project ${projectNumber} for a given ${contentType}`);
             }
@@ -20329,6 +20336,71 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
             core.setFailed(`Unable to retrieve cards for project ${projectNumber} - make sure it is configured correctly!`);
         }
     }
+}
+
+async function findProjectCardId(projectNumber) {
+    const owner = github.context.payload.repository.owner.login;
+    const repo = github.context.payload.repository.name;
+    var query, projectCardsPath, cardId;
+
+    if (github.context.eventName == "issues") {
+        query = `{
+            repository(owner: "${owner}", name: "${repo}") {
+                issue(number: ${github.context.payload.issue.number}) {
+                    projectCards {
+                        edges {
+                            node {
+                                project {
+                                    number
+                                },
+                                id
+                            }
+                        }
+                    }
+                }
+            }
+        }`;
+
+        projectCardsPath = 'repository.issue.projectCards.edges';
+
+    } else if (github.context.eventName == "pull_request") {
+        query = `{
+            repository(owner: "${owner}", name: "${repo}") {
+                pullRequest(number: ${github.context.payload.pull_request.number}) {
+                    projectCards {
+                        edges {
+                            node {
+                                project {
+                                    number
+                                },
+                                id
+                            }
+                        }
+                    }
+                }
+            }
+        }`;
+
+        projectCardsPath = 'repository.pullRequest.projectCards.edges';
+    }
+
+    console.log(`Query for project cards:\n${query}`);
+
+    const response = await octokit(query);
+        
+    const projectCards = _.get(response, projectCardsPath);
+
+    if (projectCards) {
+        const matchingCard = _.find(projectCards, function(card) {
+            return (projectNumber == _.get(card, 'node.project.number')); 
+        });
+
+        if (matchingCard) {
+            cardId = _.get(matchingCard, 'node.id');
+        }
+    }
+
+    return cardId;
 }
 
 async function run() {
