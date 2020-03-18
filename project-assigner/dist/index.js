@@ -20193,7 +20193,7 @@ async function handleLabeled(octokit, projectNumber, columnName, labelToMatch) {
         }
 
         // See if the issue or PR is already in the project
-        const existingCardId = await findProjectCardId();
+        const existingCardId = await findProjectCardId(octokit, projectNumber);
         if (existingCardId) {
             console.log(`Card already exists in project ${projectNumber} for ${contentType} ${contentId}`);
             return;
@@ -20338,7 +20338,7 @@ async function handleUnlabeled(octokit, projectNumber, labelToMatch) {
     }
 }
 
-async function findProjectCardId(projectNumber) {
+async function findProjectCardId(octokit, projectNumber) {
     const owner = github.context.payload.repository.owner.login;
     const repo = github.context.payload.repository.name;
     var query, projectCardsPath, cardId;
