@@ -4,7 +4,7 @@ To use these actions in your GitHub workfkflows, include them in the workflow co
 
 	steps:
           - name: Assign to project
-	    uses: elastic/github-actions/project-assigner@v1.0.0
+	    uses: elastic/github-actions/project-assigner@v2.0.0
 	    id: project_assigner
 	    with:
 	      issue-mappings: '[{"label": "Test", "projectNumber": 1, "columnName": "To do"},
