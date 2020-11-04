@@ -5,6 +5,9 @@ inputs:
     description: 'relative path to the beseline file created by detect-secrets'
     required: true
     default: 'baseline.file'
+outputs:
+  http-response-code:
+    description: 'HTTP response code returned by the GitHub API'
 runs:
   using: 'node12'
   main: 'index.js'
