@@ -103,3 +103,7 @@ typings/
 # TernJS port file
 .tern-port
 project-assigner/.vscode/tasks.json
+
+# MacOS finder
+.DS_Store
+
