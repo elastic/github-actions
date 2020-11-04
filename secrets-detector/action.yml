@@ -1,0 +1,10 @@
+name: 'secrets detector'
+description: 'A GitHub action that pushes detect-secrets findings to GitHub security tab'
+inputs:
+  baseline-file-path:
+    description: 'relative path to the beseline file created by detect-secrets'
+    required: true
+    default: 'baseline.file'
+runs:
+  using: 'node12'
+  main: 'index.js'
