@@ -106,3 +106,6 @@ project-assigner/.vscode/tasks.json
 # MacOS finder
 .DS_Store
 
+# IntelliJ
+.idea
+

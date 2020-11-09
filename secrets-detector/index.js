@@ -1,21 +1,140 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
 
+/**
+ * Mapping from:
+ *   plugin class names found in https://github.com/Yelp/detect-secrets/blob/master/detect_secrets/plugins/
+ * to:
+ *   class.secret_type
+ */
+const plugins = {
+    ArtifactoryDetector: 'Artifactory Credentials',
+    AWSKeyDetector: 'AWS Access Key',
+    Base64HighEntropyString: 'Base64 High Entropy String',
+    BasicAuthDetector: 'Basic Auth Credentials',
+    CloudantDetector: 'Cloudant Credentials',
+    HexHighEntropyString: 'Hex High Entropy String',
+    IbmCloudIamDetector: 'IBM Cloud IAM Key',
+    IbmCosHmacDetector: 'IBM COS HMAC Credentials',
+    JwtTokenDetector: 'JSON Web Token',
+    KeywordDetector: 'Secret Keyword',
+    MailchimpDetector: 'Mailchimp Access Key',
+    PrivateKeyDetector: 'Private Key',
+    SlackDetector: 'Slack Token',
+    SoftlayerDetector: 'SoftLayer Credentials',
+    StripeDetector: 'Stripe Access Key',
+    TwilioKeyDetector: 'Twilio API Key',
+};
+
+function getKeyByValue(object, value) {
+    return Object.keys(object).find(key => object[key] === value);
+}
+
 try {
-  const baselineFilePath = core.getInput('baseline-file-path');
-  console.log(`Hello ${baselineFilePath}`);
+    const baselineFilePath = core.getInput('baseline-file-path');
+    const sarifFilePath = core.getInput('sarif-file-path');
 
-  const octokit = github.getOctokit(process.env.MGH_TOKEN);
-  const repo = process.env.GITHUB_REPOSITORY.split("/");
-  octokit.codeScanning.uploadSarif({
-    owner: repo[0],
-    repo: repo[1],
-    commit_sha: process.env.GITHUB_SHA,
-    ref: process.env.GITHUB_REF,
-    sarif: "H4sICCGWoF8AA2RzLnNhcmlmLmpzb24AjVRNb9swDL37VwjGjrHdfWCHHrsOWIHeug4YhqBQZNrWIEuGKKUxgvz3UXKcxnGaJQfHpGjyPZJP24SxdA0WpdHpLUs/5R/zm3QRvB9QNNDy4G2c6/C2KCx/zWvpGr/yCFYY7UC7XJi2MBwlZk5ggdzKKsMORNFydGCLp5jH8fEomlmslP9FqhvLWa+Rav2hd8a28UleZ4wi72iTp7SS8E585NW8hYC0BAfCZQjCgsOY+RAjdWUsASGqz1Ye8xo4RSK/QXXFpSzWK3gDOv62EysUK0OBO47w9csPWTfftbOm65+clbqeZIzh2Bjr7gGFlZ0bZnGaMnQDNi6k/Xl3n56c7mYpK6/U1RmfNU20ZGuaEF8RwQWTbUeQ6KXyWoQEyIxlQnFEQNbynq2AcYZ92znTMlORsfI147pkxMarMgTAhrdSU2bBLQREff5/5A3N4GRCgErSqhlbF6WhLYtTKLTJfASeEXCcd7WjloN1Mg7sDHvBHdTG9qHSr5H6DF/ynrVMTr0HLimnshUXbroqk51VRvCzk0n9QL6SCoh78e2WNnI9yGcvIuedIbwq6K3tQi8ewoKVPo6qQBmcWeg+/ZPKjkntZrCXB9gW0KuLoGENQZEpWGvsVBotIPIa5nzGLRvkwIIe2F4QbK+IY3yLc126QnNd06MUXD2+19gYNU7mYtR0CFiE58srXRMv+0sh7/rZvsXPpC5hQx/ezA5nix77XV+AgI7APpJ+KODzPN/1izq7wR6uvp6G8Bmpw+oko7VMdsk/NdBMvk8GAAA=",
-    tool_name: "detect-secrets"
-  });
+    const octokit = github.getOctokit(process.env.MGH_TOKEN);
+    const repo = process.env.GITHUB_REPOSITORY.split("/");
 
+    octokit.repos.getContent({
+        owner: repo[0],
+        repo: repo[1],
+        path: baselineFilePath
+    }).then(result => {
+
+        // content will be base64 encoded
+        const rawdata = Buffer.from(result.data.content, 'base64').toString()
+        console.log(rawdata)
+
+
+        const jsonInput = JSON.parse(rawdata);
+
+        const sarif = {
+            version: '2.1.0',
+            $schema: 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+
+            runs: [
+                {
+                    tool: {
+                        driver: {
+                            name: 'detect-secrets',
+                            informationUri: 'https://github.com/Yelp/detect-secrets',
+                            rules: []
+                        }
+                    },
+
+                    invocations: [
+                        {
+                            executionSuccessful: true,
+                            endTimeUtc: jsonInput.generated_at
+                        }
+                    ],
+
+                    results: []
+                }
+            ]
+        }
+
+        jsonInput.plugins_used.forEach(function (plugin) {
+            const rule = {id: plugin.name};
+            if (plugins.hasOwnProperty(plugin.name)) {
+                rule.shortDescription = {
+                    text: 'Hard-coded ' + plugins[plugin.name]
+                };
+                rule.fullDescription = {
+                    text: 'Hard-coded secrets, such as passwords or keys, create a significant hole that allows an attacker with source code access to bypass authentication or authorization'
+                };
+                rule.helpUri = 'https://cwe.mitre.org/data/definitions/798.html'
+            }
+            Object.keys(plugin).forEach(function (key) {
+                if (key != 'name') {
+                    if (!rule.hasOwnProperty('properties')) {
+                        rule.properties = {};
+                    }
+                    rule.properties[key] = plugin[key];
+                }
+            });
+            sarif.runs[0].tool.driver.rules.push(rule);
+        });
+
+        Object.keys(jsonInput.results).forEach(function (filePath) {
+
+            jsonInput.results[filePath].forEach(function finding(f) {
+                if (!f.is_verified) {
+
+                    const ruleId = getKeyByValue(plugins, f.type);
+
+                    const existingRuleFinding = {
+                        ruleId: ruleId,
+                        level: 'error',
+                        message: {
+                            text: 'Hard-coded ' + plugins[ruleId]
+                        },
+                        locations: [
+                            {
+                                physicalLocation: {
+                                    artifactLocation: {
+                                        uri: filePath,
+                                    },
+                                    region: {
+                                        startLine: f.line_number
+                                    }
+                                }
+                            }
+                        ],
+                    }
+                    sarif.runs[0].results.push(existingRuleFinding);
+                }
+
+            });
+
+        });
+
+        console.log(JSON.stringify(sarif));
+
+    });
+    
 } catch (error) {
-  core.setFailed(error.message);
+    core.setFailed(error.message);
 }
