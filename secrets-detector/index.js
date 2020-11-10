@@ -132,12 +132,12 @@ octokit.repos.getContent({
 
     const sarif = convert(JSON.parse(detect_secrets_file_content));
 
-    octokit.repos.createFile({
+    octokit.repos.createOrUpdateFileContents({
         owner: repo[0],
         repo: repo[1],
         path: sarifFilePath,
-        message: "converted from "+baselineFilePath,
-        content: new Buffer(sarif).toString('base64')
+        message: "converted from " + baselineFilePath,
+        content: Buffer.from(sarif).toString('base64')
     }, function (err, res) {
         console.log(err, res);
         core.setFailed(err.message);
