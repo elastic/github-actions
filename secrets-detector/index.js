@@ -30,27 +30,9 @@ function getKeyByValue(object, value) {
     return Object.keys(object).find(key => object[key] === value);
 }
 
+function convert(jsonInput) {
 
-const baselineFilePath = core.getInput('baseline-file-path');
-const sarifFilePath = core.getInput('sarif-file-path');
-
-const octokit = github.getOctokit(process.env.MGH_TOKEN);
-const repo = process.env.GITHUB_REPOSITORY.split("/");
-
-octokit.repos.getContent({
-    owner: repo[0],
-    repo: repo[1],
-    path: baselineFilePath
-}).then(result => {
-
-    // content will be base64 encoded
-    const rawdata = Buffer.from(result.data.content, 'base64').toString()
-    console.log(rawdata)
-
-
-    const jsonInput = JSON.parse(rawdata);
-
-    const sarif = {
+    const jsonOutput = {
         version: '2.1.0',
         $schema: 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
 
@@ -95,7 +77,7 @@ octokit.repos.getContent({
                 rule.properties[key] = plugin[key];
             }
         });
-        sarif.runs[0].tool.driver.rules.push(rule);
+        jsonOutput.runs[0].tool.driver.rules.push(rule);
     });
 
     Object.keys(jsonInput.results).forEach(function (filePath) {
@@ -124,14 +106,44 @@ octokit.repos.getContent({
                         }
                     ],
                 }
-                sarif.runs[0].results.push(existingRuleFinding);
+                jsonOutput.runs[0].results.push(existingRuleFinding);
             }
 
         });
 
     });
 
-    console.log(JSON.stringify(sarif));
+    return jsonOutput;
+}
 
-}).catch(error => core.setFailed(error.message));
+const baselineFilePath = core.getInput('baseline-file-path');
+const sarifFilePath = core.getInput('sarif-file-path');
 
+const octokit = github.getOctokit(process.env.MGH_TOKEN);
+const repo = process.env.GITHUB_REPOSITORY.split("/");
+
+octokit.repos.getContent({
+    owner: repo[0],
+    repo: repo[1],
+    path: baselineFilePath
+}).then(result => {
+
+    const detect_secrets_file_content = Buffer.from(result.data.content, 'base64').toString()
+
+    const sarif = convert(JSON.parse(detect_secrets_file_content));
+
+    octokit.repos.createFile({
+        owner: repo[0],
+        repo: repo[1],
+        path: sarifFilePath,
+        message: "converted from "+baselineFilePath,
+        content: new Buffer(sarif).toString('base64')
+    }, function (err, res) {
+        console.log(err, res);
+        core.setFailed(err.message);
+    });
+
+}).catch(err => {
+    console.log(err);
+    core.setFailed(err.message);
+});
