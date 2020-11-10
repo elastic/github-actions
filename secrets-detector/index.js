@@ -137,7 +137,7 @@ octokit.repos.getContent({
         repo: repo[1],
         path: sarifFilePath,
         message: "converted from " + baselineFilePath,
-        content: Buffer.from(sarif).toString('base64')
+        content: Buffer.from(JSON.stringify(sarif)).toString('base64')
     }, function (err, res) {
         console.log(err, res);
         core.setFailed(err.message);
