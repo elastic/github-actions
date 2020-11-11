@@ -1,6 +1,8 @@
+const fs = require('fs').promises;
+const path = require('path');
+
 const core = require('@actions/core');
 const github = require('@actions/github');
-const fs = require('fs').promises;
 
 /**
  * Mapping from:
@@ -31,7 +33,7 @@ function getKeyByValue(object, value) {
     return Object.keys(object).find(key => object[key] === value);
 }
 
-function convert(jsonInput) {
+function convert(cwd, jsonInput) {
 
     const jsonOutput = {
         version: '2.1.0',
@@ -59,28 +61,45 @@ function convert(jsonInput) {
         ]
     }
 
+    // setting runs[0].tool.driver.rules
     jsonInput.plugins_used.forEach(function (plugin) {
-        const rule = {id: plugin.name};
+
+        const rule = {
+            id: plugin.name,
+            name: plugin.name,
+            fullDescription: {
+                text: 'Hard-coded secrets, such as passwords or keys, create a significant hole that allows an attacker with source code access to bypass authentication or authorization'
+            },
+            help: {
+                markdown: 'Please use [Harp](https://github.com/elastic/harp) to manage your secrets.'
+            }
+        };
+
         if (plugins.hasOwnProperty(plugin.name)) {
+
             rule.shortDescription = {
                 text: 'Hard-coded ' + plugins[plugin.name]
             };
-            rule.fullDescription = {
-                text: 'Hard-coded secrets, such as passwords or keys, create a significant hole that allows an attacker with source code access to bypass authentication or authorization'
-            };
             rule.helpUri = 'https://cwe.mitre.org/data/definitions/798.html'
-        }
-        Object.keys(plugin).forEach(function (key) {
-            if (key != 'name') {
-                if (!rule.hasOwnProperty('properties')) {
-                    rule.properties = {};
+
+            Object.keys(plugin).forEach(function (key) {
+                if (key != 'name') {
+                    if (!rule.hasOwnProperty('properties')) {
+                        rule.properties = {};
+                    }
+                    rule.properties[key] = plugin[key];
                 }
-                rule.properties[key] = plugin[key];
-            }
-        });
-        jsonOutput.runs[0].tool.driver.rules.push(rule);
+            });
+
+            jsonOutput.runs[0].tool.driver.rules.push(rule);
+
+        } else {
+            console.log(`Warning: unknown detect-secrets plugin: ${plugin.name}`);
+        }
+
     });
 
+    // setting runs[0].results
     Object.keys(jsonInput.results).forEach(function (filePath) {
 
         jsonInput.results[filePath].forEach(function finding(f) {
@@ -98,7 +117,7 @@ function convert(jsonInput) {
                         {
                             physicalLocation: {
                                 artifactLocation: {
-                                    uri: filePath,
+                                    uri: `${cwd}/${filePath}`,
                                 },
                                 region: {
                                     startLine: f.line_number
@@ -118,7 +137,6 @@ function convert(jsonInput) {
 }
 
 const baselineFilePath = core.getInput('baseline-file-path');
-//const sarifFilePath = core.getInput('sarif-file-path');
 
 const octokit = github.getOctokit(process.env.MGH_TOKEN);
 const repo = process.env.GITHUB_REPOSITORY.split("/");
@@ -131,7 +149,16 @@ octokit.repos.getContent({
 
     const detect_secrets_file_content = Buffer.from(result.data.content, 'base64').toString()
 
-    const sarifContent = JSON.stringify(convert(JSON.parse(detect_secrets_file_content)), null, 2);
+    const sarifContent = JSON.stringify(
+        convert(
+            path.dirname(baselineFilePath),
+            JSON.parse(detect_secrets_file_content)
+        ),
+        null,
+        2);
+
+    console.log(sarifContent);
+
     const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
 
     fs.writeFile(sarifFilePath, sarifContent).then(() => {
@@ -141,20 +168,6 @@ octokit.repos.getContent({
         console.log(err);
         core.setFailed(err.message);
     });
-
-    /*
-    octokit.repos.createOrUpdateFileContents({
-        owner: repo[0],
-        repo: repo[1],
-        path: sarifFilePath,
-        message: "converted from " + baselineFilePath,
-        sha: process.env.GITHUB_SHA,
-        content: Buffer.from(sarif).toString('base64')
-    }).catch(err => {
-        console.log(err, res);
-        core.setFailed(err.message);
-    });
-   */
 
 }).catch(err => {
     console.log(err);
