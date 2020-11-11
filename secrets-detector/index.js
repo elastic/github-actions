@@ -71,6 +71,7 @@ function convert(cwd, jsonInput) {
                 text: 'Hard-coded secrets, such as passwords or keys, create a significant hole that allows an attacker with source code access to bypass authentication or authorization'
             },
             help: {
+                text: 'Please use Harp (https://github.com/elastic/harp) to manage your secrets.',
                 markdown: 'Please use [Harp](https://github.com/elastic/harp) to manage your secrets.'
             }
         };
