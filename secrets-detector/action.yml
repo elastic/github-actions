@@ -5,10 +5,9 @@ inputs:
     description: 'relative path to the beseline file created by detect-secrets'
     required: false
     default: 'detect-secrets.json'
+outputs:
   sarif-file-path:
-    description: 'relative path to the sarif file to be created/overwritten by this action'
-    required: false
-    default: 'detect-secrets.sarif.json'
+    description: 'absolute path to the sarif file created by this action'
 runs:
   using: 'node12'
   main: 'index.js'

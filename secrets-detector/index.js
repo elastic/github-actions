@@ -1,5 +1,6 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
+const fs = require('fs').promises;
 
 /**
  * Mapping from:
@@ -117,7 +118,7 @@ function convert(jsonInput) {
 }
 
 const baselineFilePath = core.getInput('baseline-file-path');
-const sarifFilePath = core.getInput('sarif-file-path');
+//const sarifFilePath = core.getInput('sarif-file-path');
 
 const octokit = github.getOctokit(process.env.MGH_TOKEN);
 const repo = process.env.GITHUB_REPOSITORY.split("/");
@@ -130,18 +131,30 @@ octokit.repos.getContent({
 
     const detect_secrets_file_content = Buffer.from(result.data.content, 'base64').toString()
 
-    const sarif = convert(JSON.parse(detect_secrets_file_content));
+    const sarifContent = JSON.stringify(convert(JSON.parse(detect_secrets_file_content)), null, 2);
+    const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
 
+    fs.writeFile(sarifFilePath, sarifContent).then(() => {
+        console.log(`Sarif saved to ${sarifFilePath}`);
+        core.setOutput('sarif-file-path', sarifFilePath);
+    }).catch(err => {
+        console.log(err);
+        core.setFailed(err.message);
+    });
+
+    /*
     octokit.repos.createOrUpdateFileContents({
         owner: repo[0],
         repo: repo[1],
         path: sarifFilePath,
         message: "converted from " + baselineFilePath,
-        content: Buffer.from(JSON.stringify(sarif, null, 2)).toString('base64')
-    }, function (err, res) {
+        sha: process.env.GITHUB_SHA,
+        content: Buffer.from(sarif).toString('base64')
+    }).catch(err => {
         console.log(err, res);
         core.setFailed(err.message);
     });
+   */
 
 }).catch(err => {
     console.log(err);
