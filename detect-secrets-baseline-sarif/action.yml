@@ -1,5 +1,5 @@
-name: 'secrets detector'
-description: 'A GitHub action that pushes detect-secrets findings to GitHub security tab'
+name: 'detect-secrets baseline sarif'
+description: 'A GitHub action that converts detect-secrets baseline file to sarif format'
 inputs:
   baseline-file-path:
     description: 'relative path to the beseline file created by detect-secrets'
@@ -7,7 +7,7 @@ inputs:
     default: 'detect-secrets.json'
 outputs:
   sarif-file-path:
-    description: 'absolute path to the sarif file created by this action'
+    description: 'absolute path to the local sarif file created by this action'
 runs:
   using: 'node12'
   main: 'index.js'
