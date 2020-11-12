@@ -1,5 +1,4 @@
 const fs = require('fs').promises;
-const path = require('path');
 
 const core = require('@actions/core');
 const github = require('@actions/github');
@@ -142,39 +141,54 @@ function convert(cwd, jsonInput) {
     return jsonOutput;
 }
 
-const baselineFilePath = core.getInput('baseline-file-path');
+function readBaselineFileFromRepo(path) {
+    const octokit = github.getOctokit(process.env.MGH_TOKEN);
+    const repo = process.env.GITHUB_REPOSITORY.split("/");
 
-const octokit = github.getOctokit(process.env.MGH_TOKEN);
-const repo = process.env.GITHUB_REPOSITORY.split("/");
-
-octokit.repos.getContent({
-    owner: repo[0],
-    repo: repo[1],
-    path: baselineFilePath
-}).then(result => {
-
-    const detect_secrets_file_content = Buffer.from(result.data.content, 'base64').toString()
-
-    const sarifContent = JSON.stringify(
-        convert(
-            path.dirname(baselineFilePath),
-            JSON.parse(detect_secrets_file_content)
-        ),
-        null,
-        2);
-
-    console.log(sarifContent);
-
-    const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
-
-    fs.writeFile(sarifFilePath, sarifContent).then(() => {
-        console.log(`Sarif saved to ${sarifFilePath}`);
-        core.setOutput('sarif-file-path', sarifFilePath);
+    octokit.repos.getContent({
+        owner: repo[0],
+        repo: repo[1],
+        path: path
+    }).then(result => {
+        return Buffer.from(result.data.content, 'base64').toString();
     }).catch(err => {
         console.log(err);
-        core.setFailed(err.message);
+        return core.setFailed(err.message);
+    });
+}
+
+const baselineFileLocation = core.getInput('baseline-file-location');
+const baselineFilePath = core.getInput('baseline-file-path');
+
+let detect_secrets_file_content;
+if (baselineFileLocation == 'local') {
+
+    fs.readFile(baselineFileLocation).then((content) => {
+        detect_secrets_file_content = content;
+    }).catch(err => {
+        console.log(err);
+        return core.setFailed(err.message);
     });
 
+} else {
+    detect_secrets_file_content = readBaselineFileFromRepo(baselineFilePath);
+}
+
+const sarifContent = JSON.stringify(
+    convert(
+        core.getInput('scan-dir'),
+        JSON.parse(detect_secrets_file_content)
+    ),
+    null,
+    2);
+
+console.log(sarifContent);
+
+const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
+
+fs.writeFile(sarifFilePath, sarifContent).then(() => {
+    console.log(`Sarif saved to ${sarifFilePath}`);
+    core.setOutput('sarif-file-path', sarifFilePath);
 }).catch(err => {
     console.log(err);
     core.setFailed(err.message);
