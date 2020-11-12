@@ -1,4 +1,4 @@
-const fs = require('fs').promises;
+const fs = require('fs');
 
 const core = require('@actions/core');
 const github = require('@actions/github');
@@ -160,7 +160,7 @@ function readBaselineFileFromRepo(path) {
 }
 
 function readBaselineFileFromLocal(path) {
-    fs.readFile(baselineFilePath)
+    fs.readFileSync(baselineFilePath)
         .then(content => {
             return content.toString()
         })
@@ -191,7 +191,7 @@ const sarifContent = JSON.stringify(
 
 const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
 
-fs.writeFile(sarifFilePath, sarifContent).then(() => {
+fs.writeFileSync(sarifFilePath, sarifContent).then(() => {
     console.log(`Sarif saved to ${sarifFilePath}`);
     core.setOutput('sarif-file-path', sarifFilePath);
 }).catch(err => {
