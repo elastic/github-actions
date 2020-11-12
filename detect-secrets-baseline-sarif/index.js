@@ -160,41 +160,36 @@ function readBaselineFileFromRepo(path) {
 }
 
 function readBaselineFileFromLocal(path) {
-    fs.readFileSync(baselineFilePath)
-        .then(content => {
-            return content.toString()
-        })
-        .catch(err => {
-            console.log(err);
-            return core.setFailed(err.message);
-        });
+    return fs.readFileSync(baselineFilePath);
 }
 
+try {
 
-const baselineFileLocation = core.getInput('baseline-file-location');
-const baselineFilePath = core.getInput('baseline-file-path');
+    const baselineFileLocation = core.getInput('baseline-file-location');
+    const baselineFilePath = core.getInput('baseline-file-path');
 
-let detect_secrets_file_content;
-if (baselineFileLocation == 'local') {
-    detect_secrets_file_content = readBaselineFileFromLocal(baselineFilePath);
-} else {
-    detect_secrets_file_content = readBaselineFileFromRepo(baselineFilePath);
-}
+    let detect_secrets_file_content;
+    if (baselineFileLocation == 'local') {
+        detect_secrets_file_content = readBaselineFileFromLocal(baselineFilePath);
+    } else {
+        detect_secrets_file_content = readBaselineFileFromRepo(baselineFilePath);
+    }
 
-const sarifContent = JSON.stringify(
-    convert(
-        core.getInput('scan-dir'),
-        JSON.parse(detect_secrets_file_content)
-    ),
-    null,
-    2);
+    const sarifContent = JSON.stringify(
+        convert(
+            core.getInput('scan-dir'),
+            JSON.parse(detect_secrets_file_content)
+        ),
+        null,
+        2);
 
-const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
+    const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
 
-fs.writeFileSync(sarifFilePath, sarifContent).then(() => {
+    fs.writeFileSync(sarifFilePath, sarifContent);
     console.log(`Sarif saved to ${sarifFilePath}`);
     core.setOutput('sarif-file-path', sarifFilePath);
-}).catch(err => {
+
+} catch (err) {
     console.log(err);
     core.setFailed(err.message);
-});
+}
