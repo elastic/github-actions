@@ -44,6 +44,7 @@ function convert(cwd, jsonInput) {
                 tool: {
                     driver: {
                         name: 'detect-secrets',
+                        semanticVersion: jsonInput.version,
                         informationUri: 'https://github.com/Yelp/detect-secrets',
                         rules: []
                     }
@@ -66,7 +67,7 @@ function convert(cwd, jsonInput) {
 
         const rule = {
             id: plugin.name,
-            name: plugin.name,
+            helpUri: 'https://cwe.mitre.org/data/definitions/798.html',
             fullDescription: {
                 text: 'Hard-coded secrets, such as passwords or keys, create a significant hole that allows an attacker with source code access to bypass authentication or authorization'
             },
@@ -83,6 +84,7 @@ function convert(cwd, jsonInput) {
 
         if (plugins.hasOwnProperty(plugin.name)) {
 
+            rule.name = `${plugin.name} detects hard-coded ${plugins[plugin.name]}`
             rule.shortDescription = {
                 text: 'Hard-coded ' + plugins[plugin.name]
             };
