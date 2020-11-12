@@ -149,27 +149,34 @@ function readBaselineFileFromRepo(path) {
         owner: repo[0],
         repo: repo[1],
         path: path
-    }).then(result => {
-        return Buffer.from(result.data.content, 'base64').toString();
-    }).catch(err => {
-        console.log(err);
-        return core.setFailed(err.message);
-    });
+    })
+        .then(result => {
+            return Buffer.from(result.data.content, 'base64').toString()
+        })
+        .catch(err => {
+            console.log(err);
+            return core.setFailed(err.message);
+        });
 }
+
+function readBaselineFileFromLocal(path) {
+    fs.readFile(baselineFilePath)
+        .then(content => {
+            return content.toString()
+        })
+        .catch(err => {
+            console.log(err);
+            return core.setFailed(err.message);
+        });
+}
+
 
 const baselineFileLocation = core.getInput('baseline-file-location');
 const baselineFilePath = core.getInput('baseline-file-path');
 
 let detect_secrets_file_content;
 if (baselineFileLocation == 'local') {
-
-    fs.readFile(baselineFilePath).then((content) => {
-        detect_secrets_file_content = content.toString();
-    }).catch(err => {
-        console.log(err);
-        return core.setFailed(err.message);
-    });
-
+    detect_secrets_file_content = readBaselineFileFromLocal(baselineFilePath);
 } else {
     detect_secrets_file_content = readBaselineFileFromRepo(baselineFilePath);
 }
