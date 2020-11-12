@@ -73,6 +73,11 @@ function convert(cwd, jsonInput) {
             help: {
                 text: 'Please use Harp (https://github.com/elastic/harp) to manage your secrets.',
                 markdown: 'Please use [Harp](https://github.com/elastic/harp) to manage your secrets.'
+            },
+            properties: {
+                tags: [
+                    'CWE-798'
+                ]
             }
         };
 
@@ -81,13 +86,9 @@ function convert(cwd, jsonInput) {
             rule.shortDescription = {
                 text: 'Hard-coded ' + plugins[plugin.name]
             };
-            rule.helpUri = 'https://cwe.mitre.org/data/definitions/798.html'
 
             Object.keys(plugin).forEach(function (key) {
                 if (key != 'name') {
-                    if (!rule.hasOwnProperty('properties')) {
-                        rule.properties = {};
-                    }
                     rule.properties[key] = plugin[key];
                 }
             });
@@ -108,26 +109,28 @@ function convert(cwd, jsonInput) {
 
                 const ruleId = getKeyByValue(plugins, f.type);
 
-                const existingRuleFinding = {
-                    ruleId: ruleId,
-                    level: 'error',
-                    message: {
-                        text: 'Hard-coded ' + plugins[ruleId]
-                    },
-                    locations: [
-                        {
-                            physicalLocation: {
-                                artifactLocation: {
-                                    uri: `${cwd}/${filePath}`,
-                                },
-                                region: {
-                                    startLine: f.line_number
+                if (plugins.hasOwnProperty(ruleId)) {
+                    const ruleFinding = {
+                        ruleId: ruleId,
+                        level: 'error',
+                        message: {
+                            text: 'Hard-coded ' + plugins[ruleId]
+                        },
+                        locations: [
+                            {
+                                physicalLocation: {
+                                    artifactLocation: {
+                                        uri: `${cwd}/${filePath}`,
+                                    },
+                                    region: {
+                                        startLine: f.line_number
+                                    }
                                 }
                             }
-                        }
-                    ],
+                        ],
+                    }
+                    jsonOutput.runs[0].results.push(ruleFinding);
                 }
-                jsonOutput.runs[0].results.push(existingRuleFinding);
             }
 
         });
