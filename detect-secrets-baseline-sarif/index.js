@@ -164,7 +164,7 @@ let detect_secrets_file_content;
 if (baselineFileLocation == 'local') {
 
     fs.readFile(baselineFileLocation).then((content) => {
-        detect_secrets_file_content = content;
+        detect_secrets_file_content = content.toString();
     }).catch(err => {
         console.log(err);
         return core.setFailed(err.message);
@@ -173,6 +173,8 @@ if (baselineFileLocation == 'local') {
 } else {
     detect_secrets_file_content = readBaselineFileFromRepo(baselineFilePath);
 }
+
+console.log(detect_secrets_file_content);
 
 const sarifContent = JSON.stringify(
     convert(
