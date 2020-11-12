@@ -9,10 +9,6 @@ inputs:
     description: 'path to the beseline file created by detect-secrets (either local or checked in the repo)'
     required: false
     default: 'detect-secrets.json'
-  scan-dir:
-    description: 'folder that has been scanned by detect-secrets, relative to the GitHub work dir'
-    required: false
-    default: '.'
 outputs:
   sarif-file-path:
     description: 'absolute path to the local sarif file created by this action'

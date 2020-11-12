@@ -32,7 +32,7 @@ function getKeyByValue(object, value) {
     return Object.keys(object).find(key => object[key] === value);
 }
 
-function convert(cwd, jsonInput) {
+function convert(jsonInput) {
 
     const jsonOutput = {
         version: '2.1.0',
@@ -121,7 +121,7 @@ function convert(cwd, jsonInput) {
                             {
                                 physicalLocation: {
                                     artifactLocation: {
-                                        uri: `${cwd}/${filePath}`,
+                                        uri: filePath
                                     },
                                     region: {
                                         startLine: f.line_number
@@ -176,12 +176,10 @@ try {
     }
 
     const sarifContent = JSON.stringify(
-        convert(
-            core.getInput('scan-dir'),
-            JSON.parse(detect_secrets_file_content)
-        ),
+        convert(JSON.parse(detect_secrets_file_content)),
         null,
-        2);
+        2
+    );
 
     const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
 
