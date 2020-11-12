@@ -160,7 +160,7 @@ function readBaselineFileFromRepo(path) {
 }
 
 function readBaselineFileFromLocal(path) {
-    return fs.readFileSync(baselineFilePath);
+    return fs.readFileSync(path);
 }
 
 try {
