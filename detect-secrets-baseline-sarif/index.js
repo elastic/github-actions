@@ -163,7 +163,7 @@ const baselineFilePath = core.getInput('baseline-file-path');
 let detect_secrets_file_content;
 if (baselineFileLocation == 'local') {
 
-    fs.readFile(baselineFileLocation).then((content) => {
+    fs.readFile(baselineFilePath).then((content) => {
         detect_secrets_file_content = content.toString();
     }).catch(err => {
         console.log(err);
