@@ -174,8 +174,6 @@ if (baselineFileLocation == 'local') {
     detect_secrets_file_content = readBaselineFileFromRepo(baselineFilePath);
 }
 
-console.log(detect_secrets_file_content);
-
 const sarifContent = JSON.stringify(
     convert(
         core.getInput('scan-dir'),
@@ -183,8 +181,6 @@ const sarifContent = JSON.stringify(
     ),
     null,
     2);
-
-console.log(sarifContent);
 
 const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
 
