@@ -141,22 +141,24 @@ function convert(jsonInput) {
     return jsonOutput;
 }
 
-function readBaselineFileFromRepo(path) {
+async function readBaselineFileFromRepo(path) {
     const octokit = github.getOctokit(process.env.MGH_TOKEN);
     const repo = process.env.GITHUB_REPOSITORY.split("/");
 
-    octokit.repos.getContent({
-        owner: repo[0],
-        repo: repo[1],
-        path: path
-    })
-        .then(result => {
-            return Buffer.from(result.data.content, 'base64').toString()
-        })
-        .catch(err => {
-            console.log(err);
-            return core.setFailed(err.message);
+    try {
+
+        const result = await octokit.repos.getContent({
+            owner: repo[0],
+            repo: repo[1],
+            path: path
         });
+
+        return Buffer.from(result.data.content, 'base64').toString()
+        
+    } catch (err) {
+        console.log(err);
+        return core.setFailed(err.message);
+    }
 }
 
 function readBaselineFileFromLocal(path) {
