@@ -147,13 +147,14 @@ async function readBaselineFileFromRepo(path) {
 
     try {
 
-        const result = await octokit.repos.getContent({
+        const response = await octokit.repos.getContent({
             owner: repo[0],
             repo: repo[1],
             path: path
         });
 
-        return Buffer.from(result, 'base64').toString()
+        console.log(JSON.stringify(response,null,2).substr(0,50));
+        return Buffer.from(response.data.content, 'base64').toString()
 
     } catch (err) {
         console.log(err);
