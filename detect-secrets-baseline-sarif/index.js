@@ -153,7 +153,7 @@ async function readBaselineFileFromRepo(path) {
             path: path
         });
 
-        console.log(JSON.stringify(response,null,2).substr(0,50));
+        console.log(JSON.stringify(response.data,null,2).substr(0,200));
         return Buffer.from(response.data.content, 'base64').toString()
 
     } catch (err) {
