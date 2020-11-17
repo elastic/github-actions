@@ -154,7 +154,7 @@ async function readBaselineFileFromRepo(path) {
         });
 
         return Buffer.from(result.data.content, 'base64').toString()
-        
+
     } catch (err) {
         console.log(err);
         return core.setFailed(err.message);
@@ -176,6 +176,8 @@ try {
     } else {
         detect_secrets_file_content = readBaselineFileFromRepo(baselineFilePath);
     }
+
+    console.log(`>>>> ${detect_secrets_file_content}`);
 
     const sarifContent = JSON.stringify(
         convert(JSON.parse(detect_secrets_file_content)),
