@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 
 const core = require('@actions/core');
 const github = require('@actions/github');
@@ -141,64 +141,61 @@ function convert(jsonInput) {
     return jsonOutput;
 }
 
-async function readBaselineFileFromRepo(path) {
+function readBaselineFileFromRepo(path) {
     const octokit = github.getOctokit(process.env.MGH_TOKEN);
     const repo = process.env.GITHUB_REPOSITORY.split("/");
 
-    try {
-
-        const {response} = await octokit.repos.getContent({
-            owner: repo[0],
-            repo: repo[1],
-            path: path
-        });
-
-        if (response.status == 200 ) {
-            const fileContent = Buffer.from(response.data.content, 'base64').toString();
-            console.log(` HTTP response 200: ${fileContent}`);
-            return fileContent;
-        } else {
-            console.log(JSON.stringify(response,null,2));
-            core.setFailed(JSON.stringify(response,null,2));
-        }
-
-    } catch (err) {
+    octokit.repos.getContent({
+        owner: repo[0],
+        repo: repo[1],
+        path: path
+    }).then(response => {
+        const fileContent = Buffer.from(response.data.content, 'base64').toString();
+        saveSarif(fileContent);
+    }).catch(err => {
         console.log(err);
         core.setFailed(err.message);
-    }
+    });
 }
 
 function readBaselineFileFromLocal(path) {
-    return fs.readFileSync(path);
+    fs.readFile(path)
+        .then(fileContent => {
+            saveSarif(fileContent);
+        }).catch(err => {
+        console.log(err);
+        core.setFailed(err.message);
+    });
 }
 
-try {
-
-    const baselineFileLocation = core.getInput('baseline-file-location');
-    const baselineFilePath = core.getInput('baseline-file-path');
-
-    let detect_secrets_file_content;
-    if (baselineFileLocation == 'local') {
-        detect_secrets_file_content = readBaselineFileFromLocal(baselineFilePath);
-    } else {
-        detect_secrets_file_content = readBaselineFileFromRepo(baselineFilePath);
-    }
-
-    console.log(`>>>> ${detect_secrets_file_content}`);
+function saveSarif(detectSecretsFileContent) {
 
     const sarifContent = JSON.stringify(
-        convert(JSON.parse(detect_secrets_file_content)),
+        convert(JSON.parse(detectSecretsFileContent)),
         null,
         2
     );
 
     const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
 
-    fs.writeFileSync(sarifFilePath, sarifContent);
-    console.log(`Sarif saved to ${sarifFilePath}`);
-    core.setOutput('sarif-file-path', sarifFilePath);
+    fs.writeFile(sarifFilePath, sarifContent)
+        .then(_ => {
+            console.log(`Sarif saved to ${sarifFilePath}`);
+            core.setOutput('sarif-file-path', sarifFilePath);
+        }).catch(err => {
+        console.log(err);
+        core.setFailed(err.message);
+    });
 
-} catch (err) {
-    console.log(err);
-    core.setFailed(err.message);
 }
+
+
+const baselineFileLocation = core.getInput('baseline-file-location');
+const baselineFilePath = core.getInput('baseline-file-path');
+
+if (baselineFileLocation == 'local') {
+    readBaselineFileFromLocal(baselineFilePath);
+} else {
+    readBaselineFileFromRepo(baselineFilePath);
+}
+
