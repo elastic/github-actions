@@ -1,4 +1,4 @@
-name: 'detect-secrets baseline sarif'
+name: 'detect-secrets sarif'
 description: 'A GitHub action that converts detect-secrets baseline file to sarif format'
 inputs:
   baseline-file-location:
