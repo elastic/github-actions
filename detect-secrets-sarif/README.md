@@ -1,3 +1,5 @@
+![detect-secrets status](https://github.com/pierre-ernst/github-actions/workflows/.github/workflows/run-detect-secrets-baseline.yml/badge.svg)
+
 # secrets detector 
 
 A GitHub action that pushes detect-secrets findings to GitHub security tab
