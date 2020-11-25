@@ -1,4 +1,4 @@
-![detect-secrets status](https://github.com/pierre-ernst/github-actions/workflows/.github/workflows/run-detect-secrets-baseline.yml/badge.svg)
+![detect-secrets status](https://github.com/pierre-ernst/github-actions/workflows/Run%20detect-secrets%20baseline/badge.svg)
 
 # secrets detector 
 
