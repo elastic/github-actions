@@ -12,6 +12,8 @@ inputs:
 outputs:
   sarif-file-path:
     description: 'absolute path to the local sarif file created by this action'
+  issue-count:
+    description: 'number of issues found by detect-secrets'
 runs:
   using: 'node12'
   main: 'index.js'

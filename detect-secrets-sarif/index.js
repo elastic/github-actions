@@ -170,18 +170,20 @@ function readBaselineFileFromLocal(path) {
 
 function saveSarif(detectSecretsFileContent) {
 
-    const sarifContent = JSON.stringify(
-        convert(JSON.parse(detectSecretsFileContent)),
+    const sarifJson = convert(JSON.parse(detectSecretsFileContent));
+    const sarifText = JSON.stringify(
+        sarifJson,
         null,
         2
     );
 
     const sarifFilePath = `${process.env.RUNNER_TEMP}/${Date.now()}_sarif.json`;
 
-    fs.writeFile(sarifFilePath, sarifContent)
+    fs.writeFile(sarifFilePath, sarifText)
         .then(_ => {
-            console.log(`Sarif saved to ${sarifFilePath}`);
+            console.log(`Sarif saved to ${sarifFilePath} (${sarifJson.runs[0].results.length} findings)`);
             core.setOutput('sarif-file-path', sarifFilePath);
+            core.setOutput('issue-count', sarifJson.runs[0].results.length);
         }).catch(err => {
         console.log(err);
         core.setFailed(err.message);
