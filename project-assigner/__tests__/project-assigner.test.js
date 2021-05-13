@@ -656,6 +656,72 @@ describe("projectAssigner", () => {
         expect(column).toBe(null);
       });
     });
+
+
+    it("finds a column in an organization project for a column named Inbox", async () => {
+      const projectScope = "org";
+      const mockColumnQueryResponseForOrgProjectBug = JSON.parse(`{
+        "organization": {
+          "project": {
+            "columns": {
+              "nodes": [
+                {
+                  "name": "Inbox",
+                  "id": "MDEzOlByb2plY3RDb2x1bW4xMjU1MTUwMg=="
+                },
+                {
+                  "name": "Backlog",
+                  "id": "MDEzOlByb2plY3RDb2x1bW4xMjU1MTUxNg=="
+                },
+                {
+                  "name": "Future",
+                  "id": "MDEzOlByb2plY3RDb2x1bW4xMjU1MTYxNQ=="
+                },
+                {
+                  "name": "Stalled PRs",
+                  "id": "MDEzOlByb2plY3RDb2x1bW4xMjU1MTYzMg=="
+                },
+                {
+                  "name": "Other",
+                  "id": "MDEzOlByb2plY3RDb2x1bW4xMjgyMDU2Mg=="
+                },
+                {
+                  "name": "Closed",
+                  "id": "MDEzOlByb2plY3RDb2x1bW4xMjU1MTY0Nw=="
+                },
+                {
+                  "name": "icebox",
+                  "id": "PC_lAPOAGc3Zs4Ap8uBzgDYmu4"
+                },
+                {
+                  "name": "7.14-candidate",
+                  "id": "PC_lAPOAGc3Zs4Ap8uBzgDZjpM"
+                }
+              ]
+            }
+          }
+        }
+      }`);
+      const mOctokit = jest.fn().mockResolvedValueOnce(mockColumnQueryResponseForOrgProjectBug);
+      const projectNumber = 17;
+      const columnName = "Inbox";
+      const column = await projectAssigner.findColumnIdForColumnName(mOctokit, projectScope, projectNumber, columnName, mockIssuesContext);
+      expect(column).toBe('MDEzOlByb2plY3RDb2x1bW4xMjU1MTUwMg==')
+      expect(mOctokit.mock.calls.length).toBe(1);
+      expect(mOctokit.mock.calls[0][0].replace(/\s+/g, '')).toBe(`
+        {
+          organization(login: "mocked_owner") {
+              project(number: 17) {
+                  columns(first: 50) {
+                      nodes {
+                          name,
+                          id
+                      }
+                  }
+              }
+          }
+        }`.replace(/\s+/g, ''));
+    });
   });
 
   describe("findProjectCardId", () => {

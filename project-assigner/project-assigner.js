@@ -57,6 +57,7 @@ class ProjectAssigner {
 
             console.log(`Query for project cards:\n${query}`);
             const response = await octokit(query);
+            console.log(`Response from query for project cards:\n${JSON.stringify(response, null, 2)}`);
             const projectCards = _.get(response, projectCardsPath);
             let cardId = null;
             if (projectCards) {
@@ -91,15 +92,23 @@ class ProjectAssigner {
 
             console.log(`Query for project columns:\n ${query}`)
             const response = await octokit(query);
-            const columns = _.get(response, this.scopedProjectColumnsPath(projectScope));
+            console.log(`Response for project columns query:\n ${JSON.stringify(response, null, 2)}`);
+            const nodePath = this.scopedProjectColumnsPath(projectScope);
+            const columns = _.get(response, nodePath);
+            console.log(`Columns returned at nodePath '${nodePath}': ${JSON.stringify(columns, null, 2)}`);
             if (columns) {
+                console.log(`Searching for column named '${columnName}'`);
                 const targetColumn = _.find(columns, function(column) {
                     return (columnName == _.get(column, 'name'));
                 });
                 if (targetColumn) {
-                    return _.get(targetColumn, 'id');
+                    console.log(`Found targetColumn: ${JSON.stringify(targetColumn)}`);
+                    const targetColumnId =  _.get(targetColumn, 'id');
+                    console.log(`Found target column ID: ${targetColumnId}`);
+                    return targetColumnId;
                 }
             }
+            console.log(`Column not found for columName ${columnName}`);
             return null;
         } catch (error) {
             throw new Error(`Error finding column ID for column name ${columnName}: ${error.message}`);
