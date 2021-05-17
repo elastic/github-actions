@@ -5,16 +5,20 @@ on:
 jobs:
   assign_to_project:
     runs-on: ubuntu-latest
-    name: Assign a PR to project based on label
+    name: Assigns or removes a PR from a project whenever the specified label is added or removed.
     steps:
       - name: Assign to project
-        uses: elastic/github-actions/project-assigner@v2.0.0
+        uses: elastic/github-actions/project-assigner@v2.1.0
         id: project_assigner
         with:
           issue-mappings: |
             [
-              {"label": "wf_test", "projectNumber": 1, "columnName": "In progress"}
+              {"label": "wf_test", "projectNumber": 1, "columnName": "In progress", "projectScope": "repo"}
             ]
-          #ghToken: ${{ secrets.PROJECT_ASSIGNER_TEST_TOKEN }}
+          # The GITHUB_TOKEN secret is available by default on all repositories.
+          # This token has sufficient permissions to add and remove cards from any projects within this repository.
           ghToken: ${{ secrets.GITHUB_TOKEN }}
-
+          # To let this action add PRs to an organization or user level project,
+          # set the projectScope attribute in issue-mappings and set a custom
+          # GitHub API token below, stored in the repo's Secrets settings.
+          #ghToken: ${{ secrets.PROJECT_ASSIGNER_TEST_TOKEN }}
