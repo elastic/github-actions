@@ -28516,7 +28516,9 @@ class ProjectAssigner {
         const context = {
             owner: githubContext.payload.repository.owner.login,
             repo: githubContext.payload.repository.name,
-            labelName: githubContext.payload.label.name,
+        }
+        if (githubContext.payload.label) {
+            context['labelName'] = githubContext.payload.label.name;
         }
         if (githubContext.eventName == "issues") {
             context['itemType'] = 'Issue';

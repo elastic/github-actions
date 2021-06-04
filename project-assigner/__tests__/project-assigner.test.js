@@ -241,6 +241,34 @@ describe("projectAssigner", () => {
       expect(JSON.stringify(projectAssigner.normalizedGithubContext(mockPRsGithubContext)))
         .toBe(JSON.stringify(mockPRsContext));
     });
+
+    it("returns a normalied context when no label specified, such as when a label has been removed", () => {
+      const mockPRsGithubContext = {
+        payload: {
+          repository: {
+            owner: {
+              login: 'mocked_owner'
+            },
+            name: 'repo1'
+          },
+          pull_request: {
+            number: 543,
+            node_id: 'mocked_pr_node_id'
+          }
+        },
+        eventName: 'pull_request'
+      };
+      expect(JSON.stringify(projectAssigner.normalizedGithubContext(mockPRsGithubContext)))
+        .toBe(JSON.stringify({
+          owner: 'mocked_owner',
+          repo: 'repo1',
+          itemType: 'Pull request',
+          itemNumber: 543,
+          itemNodeId: 'mocked_pr_node_id',
+          itemQuery: 'pullRequest(number: 543)',
+          projectCardsPath: 'repository.pullRequest.projectCards.edges',
+        }));
+    });
   });
 
   describe("removeCard", () => {
