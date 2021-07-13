@@ -8,7 +8,7 @@ jobs:
     name: Assigns or removes an issue from a project whenever the specified label is added or removed.
     steps:
       - name: Assign to project
-        uses: elastic/github-actions/project-assigner@v2.1.0
+        uses: elastic/github-actions/project-assigner@v2.1.1
         id: project_assigner
         with:
           issue-mappings: '[{"label": "wf_test", "projectNumber": 1, "columnName": "To do", "projectScope": "repo"}]'
