@@ -65,7 +65,7 @@ jobs:
     name: Assign or remove an issue from a project based on a label
     steps:
       - name: Assign to project
-        uses: elastic/github-actions/project-assigner@v2.1.0
+        uses: elastic/github-actions/project-assigner@v2.1.1
         id: project_assigner
         with:
           issue-mappings: |
@@ -98,7 +98,7 @@ jobs:
     name: Assign or remove a PR from a project based on a label
     steps:
       - name: Assign to project
-        uses: elastic/github-actions/project-assigner@v2.1.0
+        uses: elastic/github-actions/project-assigner@v2.1.1
         id: project_assigner
         with:
           issue-mappings: |
