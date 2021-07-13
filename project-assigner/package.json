@@ -4,7 +4,7 @@
   "description": "A GitHub Action that assigns issues and pull request to a GitHub project column when specific label is applied",
   "main": "index.js",
   "scripts": {
-    "build": "ncc build index.js --license licenses.txt",
+    "build": "node node_modules/@vercel/ncc/dist/ncc build index.js --license licenses.txt",
     "test": "jest"
   },
   "repository": {
@@ -21,7 +21,7 @@
     "lodash": "^4.17.15"
   },
   "devDependencies": {
-    "jest": "^26.6.3",
-    "ncc": "^0.3.6"
+    "@vercel/ncc": "^0.28.6",
+    "jest": "^26.6.3"
   }
 }
