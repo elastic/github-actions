@@ -1,0 +1,369 @@
+name: AI Isolated Run
+
+on:
+  workflow_call:
+    inputs:
+      harness:
+        description: Trusted harness adapter to run.
+        required: false
+        type: string
+        default: codex
+      prompt:
+        description: Initial prompt passed to the harness.
+        required: true
+        type: string
+      model_provider:
+        description: "Codex model provider. Supported values: openai, litellm."
+        required: false
+        type: string
+        default: openai
+      model:
+        description: Optional Codex model name. Required when model_provider=litellm.
+        required: false
+        type: string
+        default: ''
+      checkout_repo:
+        description: Repository to checkout for the run.
+        required: false
+        type: string
+      checkout_ref:
+        description: Git ref to checkout for the run.
+        required: false
+        type: string
+      workspace_path:
+        description: Relative path where the target repository is checked out.
+        required: false
+        type: string
+        default: workspace
+      working_directory:
+        description: Relative path inside the checked out repository to run from.
+        required: false
+        type: string
+        default: .
+      codex_version:
+        description: Exact @openai/codex CLI version to install.
+        required: false
+        type: string
+        default: 0.113.0
+      runner_ref:
+        description: Git ref for the trusted harness runner code. This should match the reusable workflow ref.
+        required: true
+        type: string
+      output_artifact_name:
+        description: Artifact name for captured harness output.
+        required: false
+        type: string
+        default: ai-isolated-run-output
+    outputs:
+      artifact_name:
+        description: Uploaded artifact name containing harness output.
+        value: ${{ jobs.run.outputs.artifact_name }}
+      outcome:
+        description: Harness step outcome.
+        value: ${{ jobs.run.outputs.outcome }}
+    secrets:
+      openai_api_key:
+        description: API key used by the default OpenAI Codex provider.
+        required: false
+      litellm_api_key:
+        description: LiteLLM admin key used to mint and revoke short-lived run keys.
+        required: false
+      litellm_base_url:
+        description: LiteLLM OpenAI-compatible base URL, typically ending in /v1.
+        required: false
+
+jobs:
+  run:
+    name: Run trusted AI harness
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      artifact_name: ${{ steps.meta.outputs.artifact_name }}
+      outcome: ${{ steps.run_harness.outcome }}
+    steps:
+      - name: Set run metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_name='${{ inputs.output_artifact_name }}'
+          if [ "$artifact_name" = 'ai-isolated-run-output' ]; then
+            artifact_name="${artifact_name}-$(openssl rand -hex 8)"
+          fi
+          echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
+          echo "output_dir=${RUNNER_TEMP}/ai-isolated-run-output" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout target repository at explicit ref
+        if: ${{ inputs.checkout_ref != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.checkout_repo != '' && inputs.checkout_repo || github.repository }}
+          ref: ${{ inputs.checkout_ref }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: ${{ inputs.workspace_path }}
+
+      - name: Checkout caller repository at current SHA
+        if: ${{ inputs.checkout_ref == '' && (inputs.checkout_repo == '' || inputs.checkout_repo == github.repository) }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.checkout_repo != '' && inputs.checkout_repo || github.repository }}
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: ${{ inputs.workspace_path }}
+
+      - name: Checkout foreign repository default branch
+        if: ${{ inputs.checkout_ref == '' && inputs.checkout_repo != '' && inputs.checkout_repo != github.repository }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.checkout_repo }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: ${{ inputs.workspace_path }}
+
+      - name: Checkout trusted runner repository
+        uses: actions/checkout@v4
+        with:
+          repository: elastic/github-actions
+          ref: ${{ inputs.runner_ref }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: _runner
+
+      - name: Prepare Codex provider
+        id: provider
+        shell: bash
+        env:
+          INPUT_MODEL_PROVIDER: ${{ inputs.model_provider }}
+          INPUT_MODEL: ${{ inputs.model }}
+          OPENAI_API_KEY_SECRET: ${{ secrets.openai_api_key }}
+          LITELLM_API_KEY_SECRET: ${{ secrets.litellm_api_key }}
+          LITELLM_BASE_URL_SECRET: ${{ secrets.litellm_base_url }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          provider="${INPUT_MODEL_PROVIDER:-openai}"
+          model="${INPUT_MODEL:-}"
+          config_file=''
+          provider_auth_env_name=''
+
+          case "$provider" in
+            openai)
+              if [ -z "$OPENAI_API_KEY_SECRET" ]; then
+                echo "::error::secrets.openai_api_key is required when model_provider=openai"
+                exit 1
+              fi
+
+              provider_auth_env_name='OPENAI_API_KEY'
+              echo "::add-mask::${OPENAI_API_KEY_SECRET}"
+              printf '%s=%s\n' "$provider_auth_env_name" "$OPENAI_API_KEY_SECRET" >> "$GITHUB_ENV"
+
+              if [ -n "$model" ]; then
+                config_file="${RUNNER_TEMP}/codex-config.toml"
+                ./_runner/ai-harness-runner/bin/write_codex_config.sh \
+                  --provider openai \
+                  --model "$model" \
+                  --output-file "$config_file"
+              fi
+              ;;
+            litellm)
+              if [ -z "$LITELLM_API_KEY_SECRET" ]; then
+                echo "::error::secrets.litellm_api_key is required when model_provider=litellm"
+                exit 1
+              fi
+
+              if [ -z "$LITELLM_BASE_URL_SECRET" ]; then
+                echo "::error::secrets.litellm_base_url is required when model_provider=litellm"
+                exit 1
+              fi
+
+              if [ -z "$model" ]; then
+                echo "::error::inputs.model is required when model_provider=litellm"
+                exit 1
+              fi
+
+              base="${LITELLM_BASE_URL_SECRET%/}"
+              no_v1="${base%/v1}"
+              response="$(curl -fsS -X POST "${no_v1}/key/generate" \
+                -H "Authorization: Bearer ${LITELLM_API_KEY_SECRET}" \
+                -H "Content-Type: application/json" \
+                -d "$(jq -n \
+                  --arg model "$model" \
+                  --arg alias "ai-isolated-run-${RUN_ID}-${RUN_ATTEMPT}" \
+                  '{models: [$model], duration: "90m", key_alias: $alias}')" )"
+
+              short_key="$(printf '%s' "$response" | jq -r '.key // .token // .data.key // empty')"
+              if [ -z "$short_key" ] || [ "$short_key" = "null" ]; then
+                echo "::error::Failed to mint short-lived LiteLLM key."
+                exit 1
+              fi
+
+              echo "::add-mask::${short_key}"
+
+              provider_auth_env_name='LITELLM_API_KEY'
+              printf '%s=%s\n' "$provider_auth_env_name" "$short_key" >> "$GITHUB_ENV"
+              printf 'LITELLM_SHORT_LIVED_KEY=%s\n' "$short_key" >> "$GITHUB_ENV"
+              printf 'LITELLM_REVOKE_URL=%s\n' "${no_v1}/key/block" >> "$GITHUB_ENV"
+
+              config_file="${RUNNER_TEMP}/codex-config.toml"
+              ./_runner/ai-harness-runner/bin/write_codex_config.sh \
+                --provider litellm \
+                --model "$model" \
+                --base-url "$LITELLM_BASE_URL_SECRET" \
+                --env-key "$provider_auth_env_name" \
+                --output-file "$config_file"
+              ;;
+            *)
+              echo "::error::Unsupported model_provider: ${provider}"
+              exit 1
+              ;;
+          esac
+
+          echo "provider_auth_env_name=${provider_auth_env_name}" >> "$GITHUB_OUTPUT"
+          echo "codex_config_file=${config_file}" >> "$GITHUB_OUTPUT"
+
+      - name: Run harness
+        id: run_harness
+        continue-on-error: true
+        uses: ./_runner/ai-harness-runner
+        with:
+          harness: ${{ inputs.harness }}
+          prompt: ${{ inputs.prompt }}
+          workspace: ${{ inputs.workspace_path }}
+          working-directory: ${{ inputs.working_directory }}
+          output-directory: ${{ steps.meta.outputs.output_dir }}
+          codex-version: ${{ inputs.codex_version }}
+          provider-auth-env-name: ${{ steps.provider.outputs.provider_auth_env_name }}
+          codex-config-file: ${{ steps.provider.outputs.codex_config_file }}
+
+      - name: Revoke short-lived LiteLLM key
+        if: ${{ always() && inputs.model_provider == 'litellm' }}
+        shell: bash
+        env:
+          LITELLM_ADMIN_API_KEY: ${{ secrets.litellm_api_key }}
+          SHORT_LIVED_KEY: ${{ env.LITELLM_SHORT_LIVED_KEY }}
+          REVOKE_URL: ${{ env.LITELLM_REVOKE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SHORT_LIVED_KEY:-}" ]; then
+            echo "No short-lived LiteLLM key was minted."
+            exit 0
+          fi
+
+          curl -fsS -X POST "${REVOKE_URL}" \
+            -H "Authorization: Bearer ${LITELLM_ADMIN_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg key "$SHORT_LIVED_KEY" '{key: $key}')" \
+            || echo "::warning::Failed to revoke short-lived LiteLLM key"
+
+      - name: Clear provider credentials
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "OPENAI_API_KEY="
+            echo "LITELLM_API_KEY="
+            echo "LITELLM_SHORT_LIVED_KEY="
+            echo "LITELLM_REVOKE_URL="
+          } >> "$GITHUB_ENV"
+
+      - name: Ensure harness output exists
+        if: always()
+        shell: bash
+        env:
+          OUTPUT_DIR: ${{ steps.meta.outputs.output_dir }}
+          PROVIDER_AUTH_ENV_NAME: ${{ steps.provider.outputs.provider_auth_env_name }}
+          RUN_HARNESS_OUTCOME: ${{ steps.run_harness.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+
+          last_response_file="${OUTPUT_DIR}/last_response.md"
+          stdout_log_file="${OUTPUT_DIR}/stdout.log"
+          manifest_file="${OUTPUT_DIR}/manifest.json"
+          outputs_file="${OUTPUT_DIR}/outputs.json"
+
+          if [ ! -f "$last_response_file" ]; then
+            echo "Harness output was not produced." > "$last_response_file"
+          fi
+
+          if [ ! -f "$stdout_log_file" ]; then
+            : > "$stdout_log_file"
+          fi
+
+          if [ ! -f "$outputs_file" ]; then
+            jq -n '{
+              version: 1,
+              message: {
+                format: "markdown",
+                path: "last_response.md"
+              }
+            }' > "$outputs_file"
+          fi
+
+          if [ ! -f "$manifest_file" ]; then
+            status='failed'
+            error_message='Harness did not reach the runner step.'
+            if [ "$RUN_HARNESS_OUTCOME" = 'success' ]; then
+              status='completed'
+              error_message=''
+            fi
+
+            jq -n \
+              --arg harness '${{ inputs.harness }}' \
+              --arg codex_version '${{ inputs.codex_version }}' \
+              --arg workspace '${{ inputs.workspace_path }}' \
+              --arg working_directory '${{ inputs.working_directory }}' \
+              --arg last_response_file "$last_response_file" \
+              --arg stdout_log_file "$stdout_log_file" \
+              --arg outputs_file "$outputs_file" \
+              --arg provider_auth_env_name "$PROVIDER_AUTH_ENV_NAME" \
+              --arg status "$status" \
+              --arg error_message "$error_message" \
+              '{
+                harness: $harness,
+                codexVersion: $codex_version,
+                workspace: $workspace,
+                workingDirectory: $working_directory,
+                lastResponseFile: $last_response_file,
+                stdoutLogFile: $stdout_log_file,
+                outputsFile: $outputs_file,
+                providerAuthEnvName: $provider_auth_env_name,
+                codexConfigFile: "",
+                status: $status,
+                error: $error_message
+              }' > "$manifest_file"
+          fi
+
+      - name: Print last response
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          last_response_file="${{ steps.meta.outputs.output_dir }}/last_response.md"
+          if [ -f "$last_response_file" ]; then
+            echo "Last response:"
+            cat "$last_response_file"
+          else
+            echo "No last response file was produced."
+          fi
+
+      - name: Upload harness output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.artifact_name }}
+          path: ${{ steps.meta.outputs.output_dir }}/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Fail when harness execution failed
+        if: steps.run_harness.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Harness execution failed."
+          exit 1

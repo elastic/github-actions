@@ -1,0 +1,85 @@
+name: AI Harness Runner
+description: Run a trusted AI harness inside a checked out repository.
+
+inputs:
+  harness:
+    description: Trusted harness adapter to run.
+    required: false
+    default: codex
+  prompt:
+    description: Initial prompt passed to the harness.
+    required: true
+  workspace:
+    description: Relative path to the checked out repository.
+    required: false
+    default: workspace
+  working-directory:
+    description: Relative path inside the checked out repository to run from.
+    required: false
+    default: .
+  output-directory:
+    description: Absolute output directory for harness artifacts.
+    required: true
+  codex-version:
+    description: Exact @openai/codex CLI version to install.
+    required: false
+    default: 0.113.0
+  provider-auth-env-name:
+    description: Environment variable name that holds the provider API key.
+    required: false
+    default: OPENAI_API_KEY
+  codex-config-file:
+    description: Optional config.toml file copied into CODEX_HOME before Codex runs.
+    required: false
+
+outputs:
+  last-response-file:
+    description: Path to the captured last response file.
+    value: ${{ steps.run_harness.outputs.last_response_file }}
+  manifest-file:
+    description: Path to the harness manifest file.
+    value: ${{ steps.run_harness.outputs.manifest_file }}
+  outputs-file:
+    description: Path to the typed harness outputs file.
+    value: ${{ steps.run_harness.outputs.outputs_file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Write prompt to temp file
+      id: prompt_file
+      shell: bash
+      env:
+        INPUT_PROMPT: ${{ inputs.prompt }}
+      run: |
+        set -euo pipefail
+        prompt_file="${RUNNER_TEMP}/ai-harness-prompt.txt"
+        printf '%s' "$INPUT_PROMPT" > "$prompt_file"
+        echo "path=${prompt_file}" >> "$GITHUB_OUTPUT"
+
+    - name: Run trusted harness
+      id: run_harness
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        case "${{ inputs.harness }}" in
+          codex)
+            "${{ github.action_path }}/bin/run_codex.sh" \
+              --workspace "${GITHUB_WORKSPACE}/${{ inputs.workspace }}" \
+              --working-directory "${{ inputs.working-directory }}" \
+              --codex-version "${{ inputs.codex-version }}" \
+              --provider-auth-env-name "${{ inputs.provider-auth-env-name }}" \
+              --codex-config-file "${{ inputs.codex-config-file }}" \
+              --prompt-file "${{ steps.prompt_file.outputs.path }}" \
+              --output-dir "${{ inputs.output-directory }}"
+            ;;
+          *)
+            echo "Unsupported harness: ${{ inputs.harness }}" >&2
+            exit 1
+            ;;
+        esac
+
+        echo "last_response_file=${{ inputs.output-directory }}/last_response.md" >> "$GITHUB_OUTPUT"
+        echo "manifest_file=${{ inputs.output-directory }}/manifest.json" >> "$GITHUB_OUTPUT"
+        echo "outputs_file=${{ inputs.output-directory }}/outputs.json" >> "$GITHUB_OUTPUT"

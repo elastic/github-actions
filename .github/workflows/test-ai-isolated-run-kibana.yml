@@ -1,0 +1,28 @@
+name: Test AI Isolated Run On Kibana
+
+on:
+  # Use push so this test workflow runs from the branch under development
+  # before any manual-dispatch wrapper exists on the default branch.
+  push:
+    branches:
+      - ai-harness-runner
+
+permissions: {}
+
+jobs:
+  test_kibana:
+    name: Run against tylersmalley/kibana@ai-sandbox
+    uses: ./.github/workflows/ai-isolated-run.yml
+    with:
+      runner_ref: ${{ github.sha }}
+      model_provider: litellm
+      model: ${{ secrets.LITELLM_MODEL }}
+      prompt: >-
+        List the top-level files and directories in the repository root and
+        provide a short markdown summary. Do not modify any files.
+      checkout_repo: tylersmalley/kibana
+      checkout_ref: ai-sandbox
+      working_directory: .
+    secrets:
+      litellm_api_key: ${{ secrets.LITELLM_API_KEY }}
+      litellm_base_url: ${{ secrets.LITELLM_BASE_URL }}
