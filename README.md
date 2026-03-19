@@ -92,3 +92,12 @@ The important part is that `dist/` is committed before release so consumers can 
 directly from the repository ref they pin to.
 
 For the existing legacy action, see [project-assigner/README.md](project-assigner/README.md).
+
+## Development
+
+The root toolchain uses [pnpm](https://pnpm.io/) (see `packageManager` in [`package.json`](package.json) for exact version). Use a Node.js version that matches `engines.node`, enable Corepack, then install and run scripts from the repository root:
+
+```bash
+corepack enable
+pnpm install
+```

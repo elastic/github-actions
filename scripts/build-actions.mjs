@@ -22,7 +22,7 @@ function fail(message) {
 }
 
 if (!existsSync(nccCliPath)) {
-  fail('ncc is not installed. Run npm install before building actions.');
+  fail('ncc is not installed. Run pnpm install before building actions.');
 }
 
 const actionDirs = getActionDirs();
