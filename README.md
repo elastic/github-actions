@@ -56,7 +56,16 @@ jobs:
       - uses: elastic/github-actions/my-action@def456
 ```
 
-## Adding A New Action
+## Development
+
+The root toolchain uses [pnpm](https://pnpm.io/) (see `packageManager` in [`package.json`](package.json) for exact version). Use a Node.js version that matches `engines.node`, enable Corepack, then install and run scripts from the repository root:
+
+```bash
+corepack enable
+pnpm install
+```
+
+### Adding A New Action
 
 New actions should be created as top-level directories. A minimal example looks like this:
 
@@ -91,13 +100,8 @@ steps:
 The important part is that `dist/` is committed before release so consumers can run the action
 directly from the repository ref they pin to.
 
-For the existing legacy action, see [project-assigner/README.md](project-assigner/README.md).
+The build treats any **top-level directory** that contains an `action.yml` as an action and builds it with `@vercel/ncc`. `src/index.ts` is the required entrypoint.
 
-## Development
+### Release tags and floating majors
 
-The root toolchain uses [pnpm](https://pnpm.io/) (see `packageManager` in [`package.json`](package.json) for exact version). Use a Node.js version that matches `engines.node`, enable Corepack, then install and run scripts from the repository root:
-
-```bash
-corepack enable
-pnpm install
-```
+Releases are created via the `Release` workflow with a `version` like `v3.0.0`. In addition to creating the `vX.Y.Z` tag and GitHub release, it **force-updates** the floating major tag (for example `v3`).
