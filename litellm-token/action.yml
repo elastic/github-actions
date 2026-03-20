@@ -1,0 +1,35 @@
+name: 'LiteLLM Token'
+description: 'Mint and revoke short-lived LiteLLM keys for GitHub workflows'
+inputs:
+  operation:
+    description: 'Operation to perform: mint or revoke'
+    required: true
+  base-url:
+    description: 'LiteLLM proxy base URL'
+    required: true
+  master-key:
+    description: 'LiteLLM master key used to manage virtual keys'
+    required: true
+  models:
+    description: 'Comma separated models for mint operations'
+    required: false
+  key-ttl:
+    description: 'TTL for minted keys, for example 15m or 1h'
+    required: false
+    default: '15m'
+  max-budget:
+    description: 'Maximum budget for the minted key'
+    required: false
+    default: '5'
+  metadata:
+    description: 'Optional JSON object merged into the LiteLLM metadata payload'
+    required: false
+  api-key:
+    description: 'API key to revoke'
+    required: false
+outputs:
+  api_key:
+    description: 'The minted LiteLLM API key'
+runs:
+  using: 'node20'
+  main: 'index.js'
