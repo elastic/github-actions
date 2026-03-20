@@ -30,6 +30,7 @@ const mintFields = {
     if (!Number.isFinite(parsedValue)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
+        fatal: true,
         message: 'Input "max-budget" must be a valid number.',
       });
       return z.NEVER;
@@ -48,9 +49,10 @@ const mintFields = {
       let parsed: unknown;
       try {
         parsed = JSON.parse(value);
-      } catch (error) {
+      } catch {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
+          fatal: true,
           message: 'Input "metadata" must be valid JSON.',
         });
         return z.NEVER;
@@ -60,6 +62,7 @@ const mintFields = {
       if (!result.success) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
+          fatal: true,
           message: 'Input "metadata" must be a JSON object.',
         });
         return z.NEVER;

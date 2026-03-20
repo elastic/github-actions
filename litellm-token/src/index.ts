@@ -59,7 +59,10 @@ function getErrorMessage(error: unknown): string {
   return typeof error === 'string' ? error : 'Unexpected error';
 }
 
-if (require.main === module) {
+const isDirectExecution =
+  typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module;
+
+if (isDirectExecution) {
   run().catch((error) => {
     core.setFailed(getErrorMessage(error));
   });

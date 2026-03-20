@@ -1,7 +1,6 @@
 import axios, { AxiosError } from 'axios';
-import { expect } from 'chai';
-import * as fs from 'fs';
-import nock from 'nock';
+import * as fs from 'node:fs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildMintRequestBody,
@@ -11,14 +10,11 @@ import {
 } from './litellmToken';
 import { mintInputSchema, revokeInputSchema } from './schema';
 
-const axiosWithMutablePost = axios as typeof axios & { post: typeof axios.post };
-const originalAxiosPost = axios.post;
 const eventPath = '/tmp/litellm-token-event.json';
 
 describe('litellmToken', () => {
   afterEach(() => {
-    axiosWithMutablePost.post = originalAxiosPost;
-    nock.cleanAll();
+    vi.restoreAllMocks();
   });
 
   describe('getGitHubRuntimeMetadata', () => {
@@ -47,7 +43,7 @@ describe('litellmToken', () => {
 
         const metadata = getGitHubRuntimeMetadata();
 
-        expect(metadata).to.eql({
+        expect(metadata).toEqual({
           github_repository: 'elastic/kibana',
           github_workflow: 'reviewer:claude',
           github_run_id: '12345',
@@ -94,7 +90,7 @@ describe('litellmToken', () => {
               metadata: '{"purpose":"claude-review"}',
             }),
           ),
-        ).to.eql({
+        ).toEqual({
           models: ['llm-gateway/claude-opus-4-5'],
           duration: '30m',
           max_budget: 2.5,
@@ -123,7 +119,7 @@ describe('litellmToken', () => {
           keyTTL: '30m',
           maxBudget: '2.5',
         }).baseUrl,
-      ).to.equal('https://litellm.example.com');
+      ).toBe('https://litellm.example.com');
     });
 
     it('throws when no models are provided', () => {
@@ -135,10 +131,9 @@ describe('litellmToken', () => {
         maxBudget: '2.5',
       });
 
-      expect(result.success).to.equal(false);
-      if (!result.success) {
-        expect(result.error.issues[0]?.message).to.equal('A mint operation requires at least one model.');
-      }
+      const issueMessage = result.success ? undefined : result.error.issues[0]?.message;
+      expect(result.success).toBe(false);
+      expect(issueMessage).toBe('A mint operation requires at least one model.');
     });
 
     it('throws when metadata is not valid JSON', () => {
@@ -151,10 +146,9 @@ describe('litellmToken', () => {
         metadata: '{not-json}',
       });
 
-      expect(result.success).to.equal(false);
-      if (!result.success) {
-        expect(result.error.issues[0]?.message).to.equal('Input "metadata" must be valid JSON.');
-      }
+      const issueMessage = result.success ? undefined : result.error.issues[0]?.message;
+      expect(result.success).toBe(false);
+      expect(issueMessage).toBe('Input "metadata" must be valid JSON.');
     });
 
     it('throws when metadata is not a JSON object', () => {
@@ -167,10 +161,9 @@ describe('litellmToken', () => {
         metadata: '["bad"]',
       });
 
-      expect(result.success).to.equal(false);
-      if (!result.success) {
-        expect(result.error.issues[0]?.message).to.equal('Input "metadata" must be a JSON object.');
-      }
+      const issueMessage = result.success ? undefined : result.error.issues[0]?.message;
+      expect(result.success).toBe(false);
+      expect(issueMessage).toBe('Input "metadata" must be a JSON object.');
     });
 
     it('throws when max-budget is not a valid number', () => {
@@ -182,36 +175,28 @@ describe('litellmToken', () => {
         maxBudget: 'not-a-number',
       });
 
-      expect(result.success).to.equal(false);
-      if (!result.success) {
-        expect(result.error.issues[0]?.message).to.equal('Input "max-budget" must be a valid number.');
-      }
+      const issueMessage = result.success ? undefined : result.error.issues[0]?.message;
+      expect(result.success).toBe(false);
+      expect(issueMessage).toBe('Input "max-budget" must be a valid number.');
     });
   });
 
   describe('mintLiteLLMToken', () => {
     it('posts a mint request and returns the generated key details', async () => {
       const baseUrl = 'https://litellm.example.com';
-      let requestBody: unknown;
       const originalEnv = {
         GITHUB_REPOSITORY: process.env.GITHUB_REPOSITORY,
         GITHUB_RUN_ID: process.env.GITHUB_RUN_ID,
         GITHUB_SERVER_URL: process.env.GITHUB_SERVER_URL,
       };
+      const postSpy = vi.spyOn(axios, 'post').mockResolvedValue({
+        data: { key: 'sk-short-lived' },
+      } as Awaited<ReturnType<typeof axios.post>>);
+
       try {
         process.env.GITHUB_REPOSITORY = 'elastic/kibana';
         process.env.GITHUB_RUN_ID = '12345';
         process.env.GITHUB_SERVER_URL = 'https://github.com';
-
-        nock(baseUrl)
-          .post('/key/generate', (body) => {
-            requestBody = body;
-            return true;
-          })
-          .matchHeader('authorization', 'Bearer sk-master')
-          .reply(200, {
-            key: 'sk-short-lived',
-          });
 
         const apiKey = await mintLiteLLMToken(
           mintInputSchema.parse({
@@ -224,18 +209,28 @@ describe('litellmToken', () => {
           }),
         );
 
-        expect(requestBody).to.eql({
-          models: ['llm-gateway/claude-opus-4-5'],
-          duration: '30m',
-          max_budget: 2.5,
-          metadata: {
-            github_repository: 'elastic/kibana',
-            github_run_id: '12345',
-            github_workflow_run_url: 'https://github.com/elastic/kibana/actions/runs/12345',
-            purpose: 'claude-review',
+        expect(postSpy).toHaveBeenCalledWith(
+          `${baseUrl}/key/generate`,
+          {
+            models: ['llm-gateway/claude-opus-4-5'],
+            duration: '30m',
+            max_budget: 2.5,
+            metadata: {
+              github_repository: 'elastic/kibana',
+              github_run_id: '12345',
+              github_workflow_run_url: 'https://github.com/elastic/kibana/actions/runs/12345',
+              purpose: 'claude-review',
+            },
           },
-        });
-        expect(apiKey).to.equal('sk-short-lived');
+          {
+            headers: {
+              Authorization: 'Bearer sk-master',
+              'Content-Type': 'application/json',
+            },
+            timeout: 30_000,
+          },
+        );
+        expect(apiKey).toBe('sk-short-lived');
       } finally {
         restoreEnvVar('GITHUB_REPOSITORY', originalEnv.GITHUB_REPOSITORY);
         restoreEnvVar('GITHUB_RUN_ID', originalEnv.GITHUB_RUN_ID);
@@ -244,31 +239,12 @@ describe('litellmToken', () => {
     });
 
     it('wraps mint transport failures without exposing the master key and sets a timeout', async () => {
-      let requestConfig: unknown;
+      const postSpy = vi
+        .spyOn(axios, 'post')
+        .mockRejectedValue(createAxiosError(403, { message: 'denied' }, 'Request failed'));
 
-      axiosWithMutablePost.post = async (_url, _body, config) => {
-        requestConfig = config;
-
-        throw new AxiosError(
-          'Request failed',
-          'ERR_BAD_REQUEST',
-          {
-            headers: { Authorization: 'Bearer sk-master' },
-            timeout: 30_000,
-          } as any,
-          undefined,
-          {
-            status: 403,
-            data: { message: 'denied' },
-            statusText: 'Forbidden',
-            headers: {},
-            config: {} as any,
-          } as any,
-        );
-      };
-
-      try {
-        await mintLiteLLMToken(
+      await expect(
+        mintLiteLLMToken(
           mintInputSchema.parse({
             baseUrl: 'https://litellm.example.com',
             masterKey: 'sk-master',
@@ -276,20 +252,23 @@ describe('litellmToken', () => {
             keyTTL: '30m',
             maxBudget: '5',
           }),
-        );
-        expect.fail('Expected mintLiteLLMToken to throw.');
-      } catch (error) {
-        expect((error as Error).message).to.equal('LiteLLM mint failed. HTTP 403: denied');
-        expect((error as Error).message).not.to.contain('sk-master');
-      }
+        ),
+      ).rejects.toThrow('LiteLLM mint failed. HTTP 403: denied');
 
-      expect(requestConfig).to.include({ timeout: 30_000 });
+      expect(postSpy.mock.calls[0]?.[2]).toEqual(
+        expect.objectContaining({
+          timeout: 30_000,
+        }),
+      );
     });
-    it('throws when the mint response is not a JSON object', async () => {
-      axiosWithMutablePost.post = async () => ({ data: ['bad-response'] }) as any;
 
-      try {
-        await mintLiteLLMToken(
+    it('throws when the mint response is not a JSON object', async () => {
+      vi.spyOn(axios, 'post').mockResolvedValue({
+        data: ['bad-response'],
+      } as Awaited<ReturnType<typeof axios.post>>);
+
+      await expect(
+        mintLiteLLMToken(
           mintInputSchema.parse({
             baseUrl: 'https://litellm.example.com',
             masterKey: 'sk-master',
@@ -297,18 +276,17 @@ describe('litellmToken', () => {
             keyTTL: '30m',
             maxBudget: '5',
           }),
-        );
-        expect.fail('Expected mintLiteLLMToken to throw.');
-      } catch (error) {
-        expect((error as Error).message).to.equal('LiteLLM mint response was not a JSON object.');
-      }
+        ),
+      ).rejects.toThrow('LiteLLM mint response was not a JSON object.');
     });
 
     it('throws when the mint response key is blank', async () => {
-      axiosWithMutablePost.post = async () => ({ data: { key: '   ' } }) as any;
+      vi.spyOn(axios, 'post').mockResolvedValue({
+        data: { key: '   ' },
+      } as Awaited<ReturnType<typeof axios.post>>);
 
-      try {
-        await mintLiteLLMToken(
+      await expect(
+        mintLiteLLMToken(
           mintInputSchema.parse({
             baseUrl: 'https://litellm.example.com',
             masterKey: 'sk-master',
@@ -316,21 +294,17 @@ describe('litellmToken', () => {
             keyTTL: '30m',
             maxBudget: '5',
           }),
-        );
-        expect.fail('Expected mintLiteLLMToken to throw.');
-      } catch (error) {
-        expect((error as Error).message).to.equal('LiteLLM mint response key was missing or empty.');
-      }
+        ),
+      ).rejects.toThrow('LiteLLM mint response key was missing or empty.');
     });
   });
 
   describe('revokeLiteLLMToken', () => {
     it('deletes the api key when delete succeeds', async () => {
       const baseUrl = 'https://litellm.example.com';
-
-      nock(baseUrl)
-        .post('/key/delete', { keys: ['sk-short-lived'] })
-        .reply(200, { deleted: true });
+      const postSpy = vi.spyOn(axios, 'post').mockResolvedValue({
+        data: { deleted: true },
+      } as Awaited<ReturnType<typeof axios.post>>);
 
       await revokeLiteLLMToken(
         revokeInputSchema.parse({
@@ -338,17 +312,30 @@ describe('litellmToken', () => {
           masterKey: 'sk-master',
           apiKey: 'sk-short-lived',
         }),
+      );
+
+      expect(postSpy).toHaveBeenCalledTimes(1);
+      expect(postSpy).toHaveBeenCalledWith(
+        `${baseUrl}/key/delete`,
+        { keys: ['sk-short-lived'] },
+        {
+          headers: {
+            Authorization: 'Bearer sk-master',
+            'Content-Type': 'application/json',
+          },
+          timeout: 30_000,
+        },
       );
     });
 
     it('blocks the api key when delete fails recoverably', async () => {
       const baseUrl = 'https://litellm.example.com';
-
-      nock(baseUrl)
-        .post('/key/delete', { keys: ['sk-short-lived'] })
-        .reply(404, { message: 'key not found' })
-        .post('/key/block', { key: 'sk-short-lived' })
-        .reply(200, { blocked: true });
+      const postSpy = vi
+        .spyOn(axios, 'post')
+        .mockRejectedValueOnce(createAxiosError(404, { message: 'key not found' }))
+        .mockResolvedValueOnce({
+          data: { blocked: true },
+        } as Awaited<ReturnType<typeof axios.post>>);
 
       await revokeLiteLLMToken(
         revokeInputSchema.parse({
@@ -357,40 +344,60 @@ describe('litellmToken', () => {
           apiKey: 'sk-short-lived',
         }),
       );
+
+      expect(postSpy).toHaveBeenCalledTimes(2);
+      expect(postSpy).toHaveBeenNthCalledWith(
+        1,
+        `${baseUrl}/key/delete`,
+        { keys: ['sk-short-lived'] },
+        {
+          headers: {
+            Authorization: 'Bearer sk-master',
+            'Content-Type': 'application/json',
+          },
+          timeout: 30_000,
+        },
+      );
+      expect(postSpy).toHaveBeenNthCalledWith(
+        2,
+        `${baseUrl}/key/block`,
+        { key: 'sk-short-lived' },
+        {
+          headers: {
+            Authorization: 'Bearer sk-master',
+            'Content-Type': 'application/json',
+          },
+          timeout: 30_000,
+        },
+      );
     });
 
     it('throws combined diagnostics when delete and block both fail recoverably', async () => {
       const baseUrl = 'https://litellm.example.com';
+      const postSpy = vi
+        .spyOn(axios, 'post')
+        .mockRejectedValueOnce(createAxiosError(404, { message: 'api key not found' }))
+        .mockRejectedValueOnce(createAxiosError(400, { message: 'already blocked' }));
 
-      nock(baseUrl)
-        .post('/key/delete', { keys: ['sk-short-lived'] })
-        .reply(404, { message: 'api key not found' })
-        .post('/key/block', { key: 'sk-short-lived' })
-        .reply(400, { message: 'already blocked' });
-
-      try {
-        await revokeLiteLLMToken(
+      await expect(
+        revokeLiteLLMToken(
           revokeInputSchema.parse({
             baseUrl,
             masterKey: 'sk-master',
             apiKey: 'sk-short-lived',
           }),
-        );
-        expect.fail('Expected revokeLiteLLMToken to throw.');
-      } catch (error) {
-        expect((error as Error).message).to.equal(
-          'LiteLLM token cleanup did not confirm revocation: delete by api key: HTTP 404: api key not found | block by api key: HTTP 400: already blocked',
-        );
-      }
+        ),
+      ).rejects.toThrow(
+        'LiteLLM token cleanup did not confirm revocation: delete by api key: HTTP 404: api key not found | block by api key: HTTP 400: already blocked',
+      );
+
+      expect(postSpy).toHaveBeenCalledTimes(2);
     });
 
     it('sets a timeout on revoke requests', async () => {
-      const requestConfigs: unknown[] = [];
-
-      axiosWithMutablePost.post = async (_url, _body, config) => {
-        requestConfigs.push(config);
-        return { data: { deleted: true } } as any;
-      };
+      const postSpy = vi.spyOn(axios, 'post').mockResolvedValue({
+        data: { deleted: true },
+      } as Awaited<ReturnType<typeof axios.post>>);
 
       await revokeLiteLLMToken(
         revokeInputSchema.parse({
@@ -400,8 +407,12 @@ describe('litellmToken', () => {
         }),
       );
 
-      expect(requestConfigs).to.have.length(1);
-      expect(requestConfigs[0]).to.include({ timeout: 30_000 });
+      expect(postSpy.mock.calls).toHaveLength(1);
+      expect(postSpy.mock.calls[0]?.[2]).toEqual(
+        expect.objectContaining({
+          timeout: 30_000,
+        }),
+      );
     });
   });
 });
@@ -413,4 +424,23 @@ function restoreEnvVar(name: string, value: string | undefined) {
   }
 
   process.env[name] = value;
+}
+
+function createAxiosError(status: number, data: unknown, message = 'Request failed'): AxiosError {
+  return new AxiosError(
+    message,
+    'ERR_BAD_REQUEST',
+    {
+      headers: { Authorization: 'Bearer sk-master' },
+      timeout: 30_000,
+    } as any,
+    undefined,
+    {
+      status,
+      data,
+      statusText: 'Request failed',
+      headers: {},
+      config: {} as any,
+    } as any,
+  );
 }

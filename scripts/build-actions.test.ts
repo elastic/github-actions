@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('node:fs');
 
-const { getActionDirs, runBuildActions } = await import('./build-actions.ts');
+const { getActionDirs, runBuildActions } = await import('./build-actions');
 
 const rootDir = '/repo';
 

@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { isAxiosError, type AxiosError } from 'axios';
 import * as fs from 'fs';
 
 import {
@@ -65,7 +65,7 @@ export async function mintLiteLLMToken(inputs: MintInputs): Promise<string> {
   if (!parsedResponse.success) {
     throw new Error(
       parsedResponse.error.issues[0]?.path[0] === 'key'
-        ? parsedResponse.error.issues[0]?.message ?? 'LiteLLM mint response key was missing or empty.'
+        ? (parsedResponse.error.issues[0]?.message ?? 'LiteLLM mint response key was missing or empty.')
         : 'LiteLLM mint response was not a JSON object.',
     );
   }
@@ -104,6 +104,7 @@ export async function revokeLiteLLMToken(inputs: RevokeInputs): Promise<void> {
         `LiteLLM token cleanup did not confirm revocation: ${deleteMessage} | block by api key: ${formatAxiosError(
           blockError,
         )}`,
+        { cause: blockError },
       );
     }
   }
@@ -123,7 +124,7 @@ function getPullRequestNumber(): number | undefined {
 
     const eventNumber = parsedEvent.pull_request?.number ?? parsedEvent.number;
     return typeof eventNumber === 'number' ? eventNumber : undefined;
-  } catch (error) {
+  } catch {
     return undefined;
   }
 }
@@ -156,8 +157,8 @@ function buildRequestConfig(masterKey: string) {
   };
 }
 
-function isRecoverableRevokeError(error: unknown): boolean {
-  if (!axios.isAxiosError(error)) {
+function isRecoverableRevokeError(error: unknown): error is AxiosError {
+  if (!isAxiosError(error)) {
     return false;
   }
 
@@ -176,9 +177,9 @@ function formatAxiosError(error: AxiosError): string {
 }
 
 function wrapAxiosError(error: unknown, prefix: string): Error {
-  if (!axios.isAxiosError(error)) {
+  if (!isAxiosError(error)) {
     return error instanceof Error ? error : new Error(prefix);
   }
 
-  return new Error(`${prefix}. ${formatAxiosError(error)}`);
+  return new Error(`${prefix}. ${formatAxiosError(error)}`, { cause: error });
 }

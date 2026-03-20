@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",

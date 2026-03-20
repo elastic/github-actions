@@ -1,25 +1,33 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 const mockInputs: Record<string, string> = {};
 
 const mockCore = {
-  getInput: jest.fn((name: string) => mockInputs[name] ?? ''),
-  setFailed: jest.fn(),
-  setOutput: jest.fn(),
-  setSecret: jest.fn(),
-  info: jest.fn(),
-  warning: jest.fn(),
+  getInput: vi.fn((name: string) => mockInputs[name] ?? ''),
+  setFailed: vi.fn(),
+  setOutput: vi.fn(),
+  setSecret: vi.fn(),
+  info: vi.fn(),
+  warning: vi.fn(),
 };
 
 const mockLitellmToken = {
-  mintLiteLLMToken: jest.fn(),
-  revokeLiteLLMToken: jest.fn(),
+  mintLiteLLMToken: vi.fn(),
+  revokeLiteLLMToken: vi.fn(),
 };
 
-jest.mock('@actions/core', () => mockCore);
-jest.mock('./litellmToken', () => mockLitellmToken);
+vi.mock(import('@actions/core'), () => mockCore);
+vi.mock(import('./litellmToken'), () => mockLitellmToken);
+
+async function loadRun() {
+  const module = await import('./index');
+  return module.run;
+}
 
 describe('LiteLLM Token action', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
+    vi.resetModules();
 
     for (const key of Object.keys(mockInputs)) {
       delete mockInputs[key];
@@ -38,7 +46,7 @@ describe('LiteLLM Token action', () => {
 
     mockLitellmToken.mintLiteLLMToken.mockResolvedValue('sk-short-lived');
 
-    const { run } = require('./index');
+    const run = await loadRun();
 
     await run();
 
@@ -73,7 +81,7 @@ describe('LiteLLM Token action', () => {
       ),
     );
 
-    const { run } = require('./index');
+    const run = await loadRun();
 
     await expect(run()).rejects.toThrow(
       'LiteLLM token cleanup did not confirm revocation: delete by api key: HTTP 404: api key not found | block by api key: HTTP 400: already blocked',
