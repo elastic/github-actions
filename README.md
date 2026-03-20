@@ -65,6 +65,13 @@ corepack enable
 pnpm install
 ```
 
+Repository scripts in `scripts/` are authored in TypeScript and run with `tsx`. They are covered by the standard root checks:
+
+- `pnpm typecheck` for script typechecking and editor-friendly TS support
+- `pnpm lint` for `oxlint`
+- `pnpm test` for Vitest coverage
+- `pnpm build` to execute `scripts/build-actions.ts`
+
 ### Adding A New Action
 
 New actions should be created as top-level directories. A minimal example looks like this:
