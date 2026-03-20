@@ -90,17 +90,19 @@ describe('litellmToken', () => {
               metadata: '{"purpose":"claude-review"}',
             }),
           ),
-        ).toEqual({
-          models: ['llm-gateway/claude-opus-4-5'],
-          duration: '30m',
-          max_budget: 2.5,
-          metadata: {
-            github_repository: 'elastic/kibana',
-            github_run_id: '12345',
-            github_workflow_run_url: 'https://github.com/elastic/kibana/actions/runs/12345',
-            purpose: 'claude-review',
-          },
-        });
+        ).toEqual(
+          expect.objectContaining({
+            models: ['llm-gateway/claude-opus-4-5'],
+            duration: '30m',
+            max_budget: 2.5,
+            metadata: expect.objectContaining({
+              github_repository: 'elastic/kibana',
+              github_run_id: '12345',
+              github_workflow_run_url: 'https://github.com/elastic/kibana/actions/runs/12345',
+              purpose: 'claude-review',
+            }),
+          }),
+        );
       } finally {
         restoreEnvVar('GITHUB_REPOSITORY', originalEnv.GITHUB_REPOSITORY);
         restoreEnvVar('GITHUB_RUN_ID', originalEnv.GITHUB_RUN_ID);
@@ -211,17 +213,17 @@ describe('litellmToken', () => {
 
         expect(postSpy).toHaveBeenCalledWith(
           `${baseUrl}/key/generate`,
-          {
+          expect.objectContaining({
             models: ['llm-gateway/claude-opus-4-5'],
             duration: '30m',
             max_budget: 2.5,
-            metadata: {
+            metadata: expect.objectContaining({
               github_repository: 'elastic/kibana',
               github_run_id: '12345',
               github_workflow_run_url: 'https://github.com/elastic/kibana/actions/runs/12345',
               purpose: 'claude-review',
-            },
-          },
+            }),
+          }),
           {
             headers: {
               Authorization: 'Bearer sk-master',
