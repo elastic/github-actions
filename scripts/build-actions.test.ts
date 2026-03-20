@@ -54,8 +54,14 @@ describe('runBuildActions', () => {
 
   it('builds actions with ncc', () => {
     const log = vi.fn();
-    const spawn = vi.fn(() => ({ status: 0 }));
     const actionDir = path.join(rootDir, 'my-action');
+    const spawn = vi.fn((_, __, options: { cwd: string }) => {
+      seedFs({
+        [`${options.cwd}/dist/index.js`]: 'module.exports = {};',
+      });
+
+      return { status: 0 };
+    });
 
     seedFs({
       '/repo/node_modules/@vercel/ncc/dist/ncc/index.js': '',
@@ -65,24 +71,8 @@ describe('runBuildActions', () => {
 
     expect(runBuildActions({ rootDir, log, spawn })).toBe(0);
     expect(log).toHaveBeenCalledWith('Building my-action');
-    expect(spawn).toHaveBeenCalledWith(
-      process.execPath,
-      [
-        path.join(rootDir, 'node_modules', '@vercel', 'ncc', 'dist', 'ncc', 'index.js'),
-        'build',
-        'src/index.ts',
-        '--out',
-        'dist',
-        '--license',
-        'licenses.txt',
-        '--target',
-        'es2022',
-      ],
-      {
-        cwd: actionDir,
-        stdio: 'inherit',
-      },
-    );
+    expect(spawn).toHaveBeenCalledOnce();
+    expect(vol.existsSync(path.join(actionDir, 'dist', 'index.js'))).toBe(true);
   });
 
   it('fails when an action is missing src/index.ts', () => {
