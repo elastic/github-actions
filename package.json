@@ -16,7 +16,7 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@actions/core": "^1.11.1",
+    "@actions/core": "^3.0.0",
     "axios": "^1.13.6",
     "lodash": "^4.17.23",
     "zod": "^4.3.6"
