@@ -45,7 +45,7 @@ describe('runBuildActions', () => {
   it('skips building when no root-managed actions exist', () => {
     const log = vi.fn();
     seedFs({
-      '/repo/node_modules/@vercel/ncc/dist/ncc/index.js': '',
+      '/repo/node_modules/@vercel/ncc/dist/ncc/cli.js': '',
     });
 
     expect(runBuildActions({ rootDir, log })).toBe(0);
@@ -64,7 +64,7 @@ describe('runBuildActions', () => {
     });
 
     seedFs({
-      '/repo/node_modules/@vercel/ncc/dist/ncc/index.js': '',
+      '/repo/node_modules/@vercel/ncc/dist/ncc/cli.js': '',
       '/repo/my-action/action.yml': '',
       '/repo/my-action/src/index.ts': 'export {};',
     });
@@ -79,7 +79,7 @@ describe('runBuildActions', () => {
     const error = vi.fn();
 
     seedFs({
-      '/repo/node_modules/@vercel/ncc/dist/ncc/index.js': '',
+      '/repo/node_modules/@vercel/ncc/dist/ncc/cli.js': '',
       '/repo/my-action/action.yml': '',
     });
 

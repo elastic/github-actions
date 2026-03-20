@@ -43,7 +43,7 @@ export function runBuildActions({
   log = console.log,
   error = console.error,
 }: RunBuildActionsOptions): number {
-  const nccCliPath = path.join(rootDir, 'node_modules', '@vercel', 'ncc', 'dist', 'ncc', 'index.js');
+  const nccCliPath = path.join(rootDir, 'node_modules', '@vercel', 'ncc', 'dist', 'ncc', 'cli.js');
 
   if (!existsSync(nccCliPath)) {
     error('ncc is not installed. Run pnpm install before building actions.');
