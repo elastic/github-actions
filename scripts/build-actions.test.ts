@@ -1,22 +1,16 @@
 import path from 'node:path';
 import { vol } from 'memfs';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type * as BuildActionsModule from './build-actions.ts';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('node:fs');
 
-let getActionDirs: typeof BuildActionsModule.getActionDirs;
-let runBuildActions: typeof BuildActionsModule.runBuildActions;
+const { getActionDirs, runBuildActions } = await import('./build-actions.ts');
 
 const rootDir = '/repo';
 
 function seedFs(files: Record<string, string>): void {
   vol.fromJSON(files, rootDir);
 }
-
-beforeAll(async () => {
-  ({ getActionDirs, runBuildActions } = await import('./build-actions.ts'));
-});
 
 beforeEach(() => {
   vol.reset();

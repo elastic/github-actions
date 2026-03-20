@@ -2,6 +2,7 @@ import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 export const ignoredDirs = new Set([
   '.git',
@@ -94,10 +95,12 @@ export function runBuildActions({
   return 0;
 }
 
-const rootDir = path.resolve(__dirname, '..');
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function isDirectExecution(): boolean {
-  return process.argv[1] !== undefined && path.resolve(process.argv[1]) === __filename;
+  const scriptPath = process.argv[1];
+
+  return scriptPath !== undefined && path.resolve(scriptPath) === fileURLToPath(import.meta.url);
 }
 
 if (isDirectExecution()) {
