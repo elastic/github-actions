@@ -98,7 +98,16 @@ steps:
 ```
 
 The important part is that `dist/` is committed before release so consumers can run the action
-directly from the repository ref they pin to.
+directly from the repository ref they pin to. In this repository, `dist/` is treated as a generated
+artifact:
+
+- Pull requests are reviewed as source changes and must build successfully.
+- `master` auto-updates committed `dist/` output after merges.
+- Releases rebuild and fail if a fresh build would change committed output, so release tags always
+  point to commits with up-to-date `dist/`.
+
+CI installs dependencies with `pnpm install --frozen-lockfile`, so changes that require lockfile
+updates must include an updated `pnpm-lock.yaml`.
 
 The build treats any **top-level directory** that contains an `action.yml` as an action and builds it with `@vercel/ncc`. `src/index.ts` is the required entrypoint.
 
