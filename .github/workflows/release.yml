@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semver tag to release, for example v1.2.3
+        required: true
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+    with:
+      ref: master
+    permissions:
+      contents: read
+
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: master
+      verify_dist: true
+    permissions:
+      contents: read
+
+  release:
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GIT_AUTHOR_NAME: github-actions[bot]
+      GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+      GIT_COMMITTER_NAME: github-actions[bot]
+      GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Validate release input
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ! printf '%s' "${VERSION}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo 'Version must use semver and start with v, for example v1.2.3.'
+            exit 1
+          fi
+
+          if git rev-parse "${VERSION}" >/dev/null 2>&1; then
+            echo "Tag ${VERSION} already exists."
+            exit 1
+          fi
+
+      - name: Create and push release tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          PREVIOUS_TAG="$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' 2>/dev/null || true)"
+          echo "PREVIOUS_TAG=${PREVIOUS_TAG}" >> "${GITHUB_ENV}"
+
+          git tag -a "${VERSION}" -m "Release ${VERSION}"
+          git push origin "refs/tags/${VERSION}"
+
+      - name: Create GitHub release
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "${PREVIOUS_TAG}" ]; then
+            gh release create "${VERSION}" --verify-tag --generate-notes --notes-start-tag "${PREVIOUS_TAG}"
+          else
+            gh release create "${VERSION}" --verify-tag --generate-notes
+          fi
+
+      - name: Update floating major tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          MAJOR_TAG="${VERSION%%.*}"
+          RELEASE_SHA="$(git rev-parse HEAD)"
+
+          git tag -fa "${MAJOR_TAG}" -m "Release ${MAJOR_TAG}" "${RELEASE_SHA}"
+          git push origin "refs/tags/${MAJOR_TAG}" --force
