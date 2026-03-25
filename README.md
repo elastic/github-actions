@@ -118,6 +118,18 @@ updates must include an updated `pnpm-lock.yaml`.
 
 The build treats any **top-level directory** that contains an `action.yml` as an action and builds it with `@vercel/ncc`. `src/index.ts` is the required entrypoint.
 
-### Release tags and floating majors
+### Release tags, changelog, and floating majors
 
-Releases are created via the `Release` workflow with a `version` like `v3.0.0`. In addition to creating the `vX.Y.Z` tag and GitHub release, it **force-updates** the floating major tag (for example `v3`).
+The root [`package.json`](package.json) version is the release source of truth for this repository.
+
+To prepare a release:
+
+1. Open a pull request that bumps the root `package.json` `version` field.
+2. Merge the pull request to `master`.
+
+After merge, the release workflow:
+
+- reads the merged package version and creates the matching `vX.Y.Z` tag
+- generates release notes automatically with GitHub
+- uses [`.github/release.yml`](.github/release.yml) labels and categories to section the release page
+- force-updates the floating major tag (for example `v3`)
