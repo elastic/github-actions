@@ -14,13 +14,19 @@ const mockCore = {
   warning: vi.fn(),
 };
 
-const mockLitellmToken = {
-  mintLiteLLMToken: vi.fn(),
-  revokeLiteLLMToken: vi.fn(),
-};
+const mockMintLiteLLMToken = vi.fn();
+const mockRevokeLiteLLMToken = vi.fn();
 
 vi.mock(import('@actions/core'), () => mockCore);
-vi.mock(import('./litellmToken'), () => mockLitellmToken);
+vi.mock(import('./litellmToken'), async (importOriginal) => {
+  const actual = await importOriginal();
+
+  return {
+    ...actual,
+    mintLiteLLMToken: mockMintLiteLLMToken,
+    revokeLiteLLMToken: mockRevokeLiteLLMToken,
+  };
+});
 
 async function loadMainRun() {
   const module = await import('./index');
@@ -55,7 +61,7 @@ describe('LiteLLM Token action', () => {
       metadata: '{"purpose":"claude-review"}',
     });
 
-    mockLitellmToken.mintLiteLLMToken.mockResolvedValue('sk-short-lived');
+    mockMintLiteLLMToken.mockResolvedValue('sk-short-lived');
 
     const run = await loadMainRun();
 
@@ -69,7 +75,7 @@ describe('LiteLLM Token action', () => {
     expect(mockCore.setOutput).toHaveBeenCalledTimes(1);
     expect(mockCore.setOutput).toHaveBeenCalledWith('api_key', 'sk-short-lived');
     expect(mockCore.getInput).toHaveBeenCalledWith('models', { required: true });
-    expect(mockLitellmToken.mintLiteLLMToken).toHaveBeenCalledWith({
+    expect(mockMintLiteLLMToken).toHaveBeenCalledWith({
       baseUrl: 'https://litellm.example.com',
       masterKey: 'sk-master',
       keyTTL: '30m',
@@ -93,7 +99,7 @@ describe('LiteLLM Token action', () => {
     expect(mockCore.setSecret).toHaveBeenCalledTimes(2);
     expect(mockCore.setSecret).toHaveBeenCalledWith('sk-master');
     expect(mockCore.setSecret).toHaveBeenCalledWith('sk-short-lived');
-    expect(mockLitellmToken.revokeLiteLLMToken).toHaveBeenCalledWith({
+    expect(mockRevokeLiteLLMToken).toHaveBeenCalledWith({
       baseUrl: 'https://litellm.example.com',
       masterKey: 'sk-master',
       apiKey: 'sk-short-lived',
@@ -107,7 +113,7 @@ describe('LiteLLM Token action', () => {
 
     expect(mockCore.getInput).not.toHaveBeenCalled();
     expect(mockCore.setSecret).not.toHaveBeenCalled();
-    expect(mockLitellmToken.revokeLiteLLMToken).not.toHaveBeenCalled();
+    expect(mockRevokeLiteLLMToken).not.toHaveBeenCalled();
     expect(mockCore.info).toHaveBeenCalledWith('No LiteLLM token was minted. Skipping post cleanup.');
   });
 });
