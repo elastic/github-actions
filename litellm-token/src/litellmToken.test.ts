@@ -4,11 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  getGitHubRuntimeMetadata,
-  mintLiteLLMToken,
-  revokeLiteLLMToken,
-} from './litellmToken';
+import { getGitHubRuntimeMetadata, mintLiteLLMToken, revokeLiteLLMToken } from './litellmToken';
 import { mintInputSchema, revokeInputSchema } from './schema';
 
 const BASE_URL = 'https://litellm.example.com';
@@ -329,7 +325,7 @@ function restoreEnvVar(name: string, value: string | undefined) {
   process.env[name] = value;
 }
 
-function parseMintInput(overrides: Partial<(typeof DEFAULT_MINT_RAW_INPUTS) & { metadata?: string[] }> = {}) {
+function parseMintInput(overrides: Partial<typeof DEFAULT_MINT_RAW_INPUTS & { metadata?: string[] }> = {}) {
   return mintInputSchema.parse({
     ...DEFAULT_MINT_RAW_INPUTS,
     ...overrides,
@@ -343,10 +339,7 @@ function parseRevokeInput(overrides: Partial<typeof DEFAULT_REVOKE_RAW_INPUTS> =
   });
 }
 
-function expectValidationFailure(
-  result: ReturnType<typeof mintInputSchema.safeParse>,
-  expectedPath: string,
-) {
+function expectValidationFailure(result: ReturnType<typeof mintInputSchema.safeParse>, expectedPath: string) {
   expect(result.success).toBe(false);
   if (result.success) {
     return;
