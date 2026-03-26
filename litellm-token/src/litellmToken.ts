@@ -1,5 +1,5 @@
 import axios, { isAxiosError, type AxiosError } from 'axios';
-import * as fs from 'fs';
+import { readFileSync } from 'node:fs';
 
 import {
   errorResponseSchema,
@@ -119,7 +119,7 @@ function getPullRequestNumber(): number | undefined {
   }
 
   try {
-    const parsedEvent = JSON.parse(fs.readFileSync(eventPath, 'utf8')) as {
+    const parsedEvent = JSON.parse(readFileSync(eventPath, 'utf8')) as {
       number?: unknown;
       pull_request?: { number?: unknown };
     };

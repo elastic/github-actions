@@ -7,6 +7,8 @@ vi.mock('node:fs');
 const { getActionDirs, runBuildActions } = await import('./build-actions');
 
 const rootDir = '/repo';
+const log = vi.fn();
+const error = vi.fn();
 
 function seedFs(files: Record<string, string>): void {
   vol.fromJSON(files, rootDir);
@@ -36,14 +38,11 @@ describe('getActionDirs', () => {
 
 describe('runBuildActions', () => {
   it('returns an error when ncc is unavailable', () => {
-    const error = vi.fn();
-
     expect(runBuildActions({ rootDir, error })).toBe(1);
     expect(error).toHaveBeenCalledWith('ncc is not installed. Run pnpm install before building actions.');
   });
 
   it('skips building when no root-managed actions exist', () => {
-    const log = vi.fn();
     seedFs({
       '/repo/node_modules/@vercel/ncc/dist/ncc/cli.js': '',
     });
@@ -70,7 +69,7 @@ describe('runBuildActions', () => {
       '/repo/my-action/src/index.ts': 'export {};',
     });
 
-    expect(runBuildActions({ rootDir, spawn })).toBe(0);
+    expect(runBuildActions({ rootDir, log, spawn })).toBe(0);
     expect(spawn).toHaveBeenCalledOnce();
     expect(vol.readFileSync(path.join(actionDir, 'dist', 'index.js'), 'utf8')).toContain('main');
     expect(vol.readFileSync(path.join(actionDir, 'dist', 'licenses.txt'), 'utf8')).toContain('license text');
@@ -103,7 +102,7 @@ describe('runBuildActions', () => {
       '/repo/my-action/dist/post.js': 'stale post',
     });
 
-    expect(runBuildActions({ rootDir, spawn })).toBe(0);
+    expect(runBuildActions({ rootDir, log, spawn })).toBe(0);
     expect(spawn).toHaveBeenCalledTimes(3);
     expect(spawn).toHaveBeenNthCalledWith(
       1,
@@ -130,8 +129,6 @@ describe('runBuildActions', () => {
   });
 
   it('fails when an action is missing src/index.ts', () => {
-    const error = vi.fn();
-
     seedFs({
       '/repo/node_modules/@vercel/ncc/dist/ncc/cli.js': '',
       '/repo/my-action/action.yml': '',
