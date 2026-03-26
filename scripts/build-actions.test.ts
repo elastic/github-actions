@@ -52,12 +52,13 @@ describe('runBuildActions', () => {
     expect(log).toHaveBeenCalledWith('No root-managed actions found. Skipping build.');
   });
 
-  it('builds actions with ncc', () => {
-    const log = vi.fn();
+  it('builds the main action bundle', () => {
     const actionDir = path.join(rootDir, 'my-action');
-    const spawn = vi.fn((_, __, options: { cwd: string }) => {
+    const spawn = vi.fn((_, args: string[], options: { cwd: string }) => {
+      const outputDir = path.join(options.cwd, args[args.indexOf('--out') + 1]!);
       seedFs({
-        [`${options.cwd}/dist/index.js`]: 'module.exports = {};',
+        [path.join(outputDir, 'index.js')]: 'module.exports = "main";',
+        [path.join(outputDir, 'licenses.txt')]: 'license text',
       });
 
       return { status: 0 };
@@ -69,10 +70,63 @@ describe('runBuildActions', () => {
       '/repo/my-action/src/index.ts': 'export {};',
     });
 
-    expect(runBuildActions({ rootDir, log, spawn })).toBe(0);
-    expect(log).toHaveBeenCalledWith('Building my-action');
+    expect(runBuildActions({ rootDir, spawn })).toBe(0);
     expect(spawn).toHaveBeenCalledOnce();
-    expect(vol.existsSync(path.join(actionDir, 'dist', 'index.js'))).toBe(true);
+    expect(vol.readFileSync(path.join(actionDir, 'dist', 'index.js'), 'utf8')).toContain('main');
+    expect(vol.readFileSync(path.join(actionDir, 'dist', 'licenses.txt'), 'utf8')).toContain('license text');
+  });
+
+  it('builds optional pre and post bundles to flat dist files', () => {
+    const actionDir = path.join(rootDir, 'my-action');
+    const spawn = vi.fn((_, args: string[], options: { cwd: string }) => {
+      const outputDir = path.join(options.cwd, args[args.indexOf('--out') + 1]!);
+      const entryFile = args[2];
+      const writes: Record<string, string> = {
+        [path.join(outputDir, 'index.js')]: `module.exports = ${JSON.stringify(entryFile)};`,
+      };
+
+      if (args.includes('--license')) {
+        writes[path.join(outputDir, 'licenses.txt')] = 'license text';
+      }
+
+      seedFs(writes);
+      return { status: 0 };
+    });
+
+    seedFs({
+      '/repo/node_modules/@vercel/ncc/dist/ncc/cli.js': '',
+      '/repo/my-action/action.yml': '',
+      '/repo/my-action/src/index.ts': 'export {};',
+      '/repo/my-action/src/pre.ts': 'export {};',
+      '/repo/my-action/src/post.ts': 'export {};',
+      '/repo/my-action/dist/pre.js': 'stale pre',
+      '/repo/my-action/dist/post.js': 'stale post',
+    });
+
+    expect(runBuildActions({ rootDir, spawn })).toBe(0);
+    expect(spawn).toHaveBeenCalledTimes(3);
+    expect(spawn).toHaveBeenNthCalledWith(
+      1,
+      expect.any(String),
+      expect.arrayContaining(['src/index.ts', '--out', 'dist', '--license', 'licenses.txt']),
+      expect.objectContaining({ cwd: actionDir }),
+    );
+    expect(spawn).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      expect.arrayContaining(['src/pre.ts', '--out', path.join('dist', 'pre')]),
+      expect.objectContaining({ cwd: actionDir }),
+    );
+    expect(spawn).toHaveBeenNthCalledWith(
+      3,
+      expect.any(String),
+      expect.arrayContaining(['src/post.ts', '--out', path.join('dist', 'post')]),
+      expect.objectContaining({ cwd: actionDir }),
+    );
+    expect(vol.readFileSync(path.join(actionDir, 'dist', 'pre.js'), 'utf8')).toContain('src/pre.ts');
+    expect(vol.readFileSync(path.join(actionDir, 'dist', 'post.js'), 'utf8')).toContain('src/post.ts');
+    expect(vol.existsSync(path.join(actionDir, 'dist', 'pre'))).toBe(false);
+    expect(vol.existsSync(path.join(actionDir, 'dist', 'post'))).toBe(false);
   });
 
   it('fails when an action is missing src/index.ts', () => {

@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockInputs: Record<string, string> = {};
+const mockState: Record<string, string> = {};
 
 const mockCore = {
   getInput: vi.fn((name: string) => mockInputs[name] ?? ''),
+  getState: vi.fn((name: string) => mockState[name] ?? ''),
+  saveState: vi.fn(),
   setFailed: vi.fn(),
   setOutput: vi.fn(),
   setSecret: vi.fn(),
@@ -19,8 +22,13 @@ const mockLitellmToken = {
 vi.mock(import('@actions/core'), () => mockCore);
 vi.mock(import('./litellmToken'), () => mockLitellmToken);
 
-async function loadRun() {
+async function loadMainRun() {
   const module = await import('./index');
+  return module.run;
+}
+
+async function loadPostRun() {
+  const module = await import('./post');
   return module.run;
 }
 
@@ -32,11 +40,14 @@ describe('LiteLLM Token action', () => {
     for (const key of Object.keys(mockInputs)) {
       delete mockInputs[key];
     }
+
+    for (const key of Object.keys(mockState)) {
+      delete mockState[key];
+    }
   });
 
-  it('masks the minted api key and only exposes api_key output', async () => {
+  it('mints a token, saves it for cleanup, and only exposes api_key output', async () => {
     Object.assign(mockInputs, {
-      operation: 'mint',
       'base-url': 'https://litellm.example.com',
       'master-key': 'sk-master',
       models: 'llm-gateway/claude-opus-4-5',
@@ -46,16 +57,18 @@ describe('LiteLLM Token action', () => {
 
     mockLitellmToken.mintLiteLLMToken.mockResolvedValue('sk-short-lived');
 
-    const run = await loadRun();
+    const run = await loadMainRun();
 
     await run();
 
     expect(mockCore.setSecret).toHaveBeenCalledTimes(2);
     expect(mockCore.setSecret).toHaveBeenCalledWith('sk-master');
     expect(mockCore.setSecret).toHaveBeenCalledWith('sk-short-lived');
+    expect(mockCore.saveState).toHaveBeenCalledTimes(1);
+    expect(mockCore.saveState).toHaveBeenCalledWith('minted_api_key', 'sk-short-lived');
     expect(mockCore.setOutput).toHaveBeenCalledTimes(1);
     expect(mockCore.setOutput).toHaveBeenCalledWith('api_key', 'sk-short-lived');
-    expect(mockCore.getInput).toHaveBeenCalledWith('models');
+    expect(mockCore.getInput).toHaveBeenCalledWith('models', { required: true });
     expect(mockLitellmToken.mintLiteLLMToken).toHaveBeenCalledWith({
       baseUrl: 'https://litellm.example.com',
       masterKey: 'sk-master',
@@ -63,39 +76,38 @@ describe('LiteLLM Token action', () => {
       maxBudget: 5,
       models: ['llm-gateway/claude-opus-4-5'],
       metadata: { purpose: 'claude-review' },
-      operation: 'mint',
     });
   });
 
-  it('masks revoke secrets and fails when revocation is not confirmed', async () => {
+  it('revokes the saved api key during post cleanup', async () => {
     Object.assign(mockInputs, {
-      operation: 'revoke',
       'base-url': 'https://litellm.example.com',
       'master-key': 'sk-master',
-      'api-key': 'sk-short-lived',
     });
+    mockState.minted_api_key = 'sk-short-lived';
 
-    mockLitellmToken.revokeLiteLLMToken.mockRejectedValue(
-      new Error(
-        'LiteLLM token cleanup did not confirm revocation: delete by api key: HTTP 404: api key not found | block by api key: HTTP 400: already blocked',
-      ),
-    );
+    const run = await loadPostRun();
 
-    const run = await loadRun();
-
-    await expect(run()).rejects.toThrow(
-      'LiteLLM token cleanup did not confirm revocation: delete by api key: HTTP 404: api key not found | block by api key: HTTP 400: already blocked',
-    );
+    await run();
 
     expect(mockCore.setSecret).toHaveBeenCalledTimes(2);
     expect(mockCore.setSecret).toHaveBeenCalledWith('sk-master');
     expect(mockCore.setSecret).toHaveBeenCalledWith('sk-short-lived');
-    expect(mockCore.warning).not.toHaveBeenCalled();
     expect(mockLitellmToken.revokeLiteLLMToken).toHaveBeenCalledWith({
       baseUrl: 'https://litellm.example.com',
       masterKey: 'sk-master',
       apiKey: 'sk-short-lived',
-      operation: 'revoke',
     });
+  });
+
+  it('skips post cleanup when there is no saved api key', async () => {
+    const run = await loadPostRun();
+
+    await run();
+
+    expect(mockCore.getInput).not.toHaveBeenCalled();
+    expect(mockCore.setSecret).not.toHaveBeenCalled();
+    expect(mockLitellmToken.revokeLiteLLMToken).not.toHaveBeenCalled();
+    expect(mockCore.info).toHaveBeenCalledWith('No LiteLLM token was minted. Skipping post cleanup.');
   });
 });

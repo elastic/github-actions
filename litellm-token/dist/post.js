@@ -31185,7 +31185,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 8219:
+/***/ 2842:
 /***/ ((module, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -31638,16 +31638,16 @@ function file_command_issueFileCommand(command, message) {
     if (!filePath) {
         throw new Error(`Unable to find environment variable for file command ${command}`);
     }
-    if (!external_fs_.existsSync(filePath)) {
+    if (!fs.existsSync(filePath)) {
         throw new Error(`Missing file at path: ${filePath}`);
     }
-    external_fs_.appendFileSync(filePath, `${utils_toCommandValue(message)}${external_os_namespaceObject.EOL}`, {
+    fs.appendFileSync(filePath, `${toCommandValue(message)}${os.EOL}`, {
         encoding: 'utf8'
     });
 }
 function file_command_prepareKeyValueMessage(key, value) {
-    const delimiter = `ghadelimiter_${external_crypto_.randomUUID()}`;
-    const convertedValue = utils_toCommandValue(value);
+    const delimiter = `ghadelimiter_${crypto.randomUUID()}`;
+    const convertedValue = toCommandValue(value);
     // These should realistically never happen, but just in case someone finds a
     // way to exploit uuid generation let's not allow keys or values that contain
     // the delimiter.
@@ -31657,7 +31657,7 @@ function file_command_prepareKeyValueMessage(key, value) {
     if (convertedValue.includes(delimiter)) {
         throw new Error(`Unexpected input: value should not contain the delimiter "${delimiter}"`);
     }
-    return `${key}<<${delimiter}${external_os_namespaceObject.EOL}${convertedValue}${external_os_namespaceObject.EOL}${delimiter}`;
+    return `${key}<<${delimiter}${os.EOL}${convertedValue}${os.EOL}${delimiter}`;
 }
 //# sourceMappingURL=file-command.js.map
 // EXTERNAL MODULE: external "path"
@@ -34279,10 +34279,10 @@ function getBooleanInput(name, options) {
 function setOutput(name, value) {
     const filePath = process.env['GITHUB_OUTPUT'] || '';
     if (filePath) {
-        return file_command_issueFileCommand('OUTPUT', file_command_prepareKeyValueMessage(name, value));
+        return issueFileCommand('OUTPUT', prepareKeyValueMessage(name, value));
     }
-    process.stdout.write(external_os_namespaceObject.EOL);
-    command_issueCommand('set-output', { name }, utils_toCommandValue(value));
+    process.stdout.write(os.EOL);
+    issueCommand('set-output', { name }, toCommandValue(value));
 }
 /**
  * Enables or disables the echoing of commands into stdout for the rest of the step.
@@ -34401,9 +34401,9 @@ function group(name, fn) {
 function saveState(name, value) {
     const filePath = process.env['GITHUB_STATE'] || '';
     if (filePath) {
-        return file_command_issueFileCommand('STATE', file_command_prepareKeyValueMessage(name, value));
+        return issueFileCommand('STATE', prepareKeyValueMessage(name, value));
     }
-    command_issueCommand('save-state', { name }, utils_toCommandValue(value));
+    issueCommand('save-state', { name }, toCommandValue(value));
 }
 /**
  * Gets the value of an state set by this action's main execution.
@@ -48223,7 +48223,7 @@ const revokeFields = {
 };
 const mintInputSchema = commonInputSchema.extend(mintFields);
 const revokeInputSchema = commonInputSchema.extend(revokeFields);
-const mintResponseSchema = object({
+const schema_mintResponseSchema = object({
     key: schemas_string().refine((value) => value.trim().length > 0, {
         message: 'LiteLLM mint response key was missing or empty.',
     }),
@@ -54018,7 +54018,7 @@ function spread(callback) {
  *
  * @returns {boolean} True if the payload is an error thrown by Axios, otherwise false
  */
-function isAxiosError_isAxiosError(payload) {
+function isAxiosError(payload) {
   return utils.isObject(payload) && payload.isAxiosError === true;
 }
 
@@ -54174,7 +54174,7 @@ axios_axios.all = function all(promises) {
 axios_axios.spread = spread;
 
 // Expose isAxiosError
-axios_axios.isAxiosError = isAxiosError_isAxiosError;
+axios_axios.isAxiosError = isAxiosError;
 
 // Expose mergeConfig
 axios_axios.mergeConfig = mergeConfig;
@@ -54258,7 +54258,7 @@ function buildMintRequestBody(inputs) {
 async function mintLiteLLMToken(inputs) {
     let response;
     try {
-        response = await lib_axios.post(`${inputs.baseUrl}/key/generate`, buildMintRequestBody(inputs), buildRequestConfig(inputs.masterKey));
+        response = await axios.post(`${inputs.baseUrl}/key/generate`, buildMintRequestBody(inputs), buildRequestConfig(inputs.masterKey));
     }
     catch (error) {
         throw wrapAxiosError(error, 'LiteLLM mint failed');
@@ -54273,7 +54273,7 @@ async function mintLiteLLMToken(inputs) {
 }
 async function revokeLiteLLMToken(inputs) {
     try {
-        await axios.post(`${inputs.baseUrl}/key/delete`, { keys: [inputs.apiKey] }, buildRequestConfig(inputs.masterKey));
+        await lib_axios.post(`${inputs.baseUrl}/key/delete`, { keys: [inputs.apiKey] }, buildRequestConfig(inputs.masterKey));
         return;
     }
     catch (deleteError) {
@@ -54282,7 +54282,7 @@ async function revokeLiteLLMToken(inputs) {
         }
         const deleteMessage = `delete by api key: ${formatAxiosError(deleteError)}`;
         try {
-            await axios.post(`${inputs.baseUrl}/key/block`, { key: inputs.apiKey }, buildRequestConfig(inputs.masterKey));
+            await lib_axios.post(`${inputs.baseUrl}/key/block`, { key: inputs.apiKey }, buildRequestConfig(inputs.masterKey));
             return;
         }
         catch (blockError) {
@@ -54299,7 +54299,7 @@ function getPullRequestNumber() {
         return undefined;
     }
     try {
-        const parsedEvent = JSON.parse(external_fs_.readFileSync(eventPath, 'utf8'));
+        const parsedEvent = JSON.parse(fs.readFileSync(eventPath, 'utf8'));
         const eventNumber = parsedEvent.pull_request?.number ?? parsedEvent.number;
         return typeof eventNumber === 'number' ? eventNumber : undefined;
     }
@@ -54331,7 +54331,7 @@ function buildRequestConfig(masterKey) {
     };
 }
 function isRecoverableRevokeError(error) {
-    if (!isAxiosError(error)) {
+    if (!axios_isAxiosError(error)) {
         return false;
     }
     const status = error.response?.status;
@@ -54351,31 +54351,31 @@ function wrapAxiosError(error, prefix) {
     return new Error(`${prefix}. ${formatAxiosError(error)}`, { cause: error });
 }
 
-;// CONCATENATED MODULE: ./src/index.ts
+;// CONCATENATED MODULE: ./src/post.ts
 /* module decorator */ module = __nccwpck_require__.hmd(module);
 
 
 
 async function run() {
+    const apiKey = getState(mintedApiKeyStateKey).trim();
+    if (!apiKey) {
+        info('No LiteLLM token was minted. Skipping post cleanup.');
+        return;
+    }
     const rawInputs = {
         baseUrl: getInput('base-url', { required: true }),
         masterKey: getInput('master-key', { required: true }),
-        models: getInput('models', { required: true }),
-        keyTTL: getInput('key-ttl') || '15m',
-        maxBudget: getInput('max-budget') || '5',
-        metadata: getInput('metadata') || undefined,
+        apiKey,
     };
     core_setSecret(rawInputs.masterKey);
-    const parsedInputs = mintInputSchema.safeParse(rawInputs);
+    core_setSecret(rawInputs.apiKey);
+    const parsedInputs = revokeInputSchema.safeParse(rawInputs);
     if (!parsedInputs.success) {
-        throw new Error(parsedInputs.error.issues[0]?.message ?? 'Invalid LiteLLM token inputs.');
+        throw new Error(parsedInputs.error.issues[0]?.message ?? 'Invalid LiteLLM cleanup inputs.');
     }
     const inputs = parsedInputs.data;
-    const apiKey = await mintLiteLLMToken(inputs);
-    core_setSecret(apiKey);
-    saveState(mintedApiKeyStateKey, apiKey);
-    setOutput('api_key', apiKey);
-    info('Minted LiteLLM token.');
+    await revokeLiteLLMToken(inputs);
+    info('Revoked LiteLLM token.');
 }
 const isDirectExecution =  true && __nccwpck_require__.c[__nccwpck_require__.s] === module;
 if (isDirectExecution) {
@@ -54758,7 +54758,7 @@ module.exports = /*#__PURE__*/JSON.parse('{"application/1d-interleaved-parityfec
 /******/ 	// module cache are used so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	var __webpack_exports__ = __nccwpck_require__(__nccwpck_require__.s = 8219);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(__nccwpck_require__.s = 2842);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()

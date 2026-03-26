@@ -11,6 +11,8 @@ import {
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
+export const mintedApiKeyStateKey = 'minted_api_key';
+
 export function getGitHubRuntimeMetadata(): JsonObject {
   const metadata: JsonObject = {};
 

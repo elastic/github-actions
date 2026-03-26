@@ -1,5 +1,5 @@
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +27,12 @@ type RunBuildActionsOptions = {
   spawn?: BuildSpawn;
   log?: (message: string) => void;
   error?: (message: string) => void;
+};
+
+type HookBuild = {
+  sourceFile: string;
+  outputDir: string;
+  finalFile: string;
 };
 
 export function getActionDirs(rootDir: string): string[] {
@@ -58,17 +64,31 @@ export function runBuildActions({
   }
 
   for (const actionDir of actionDirs) {
-    const entryFile = path.join(actionDir, 'src', 'index.ts');
     const relativeActionDir = path.relative(rootDir, actionDir);
+    const mainSourceFile = path.join(actionDir, 'src', 'index.ts');
+    const hookBuilds: HookBuild[] = [
+      {
+        sourceFile: path.join(actionDir, 'src', 'pre.ts'),
+        outputDir: path.join(actionDir, 'dist', 'pre'),
+        finalFile: path.join(actionDir, 'dist', 'pre.js'),
+      },
+      {
+        sourceFile: path.join(actionDir, 'src', 'post.ts'),
+        outputDir: path.join(actionDir, 'dist', 'post'),
+        finalFile: path.join(actionDir, 'dist', 'post.js'),
+      },
+    ];
 
-    if (!existsSync(entryFile)) {
+    if (!existsSync(mainSourceFile)) {
       error(`${relativeActionDir} is missing src/index.ts.`);
       return 1;
     }
 
     log(`Building ${relativeActionDir}`);
 
-    const result = spawn(
+    rmSync(path.join(actionDir, 'dist'), { recursive: true, force: true });
+
+    const mainResult = spawn(
       process.execPath,
       [
         nccCliPath,
@@ -87,8 +107,38 @@ export function runBuildActions({
       },
     );
 
-    if (result.status !== 0) {
-      return result.status ?? 1;
+    if (mainResult.status !== 0) {
+      return mainResult.status ?? 1;
+    }
+
+    for (const hookBuild of hookBuilds) {
+      if (!existsSync(hookBuild.sourceFile)) {
+        continue;
+      }
+
+      const result = spawn(
+        process.execPath,
+        [
+          nccCliPath,
+          'build',
+          path.relative(actionDir, hookBuild.sourceFile),
+          '--out',
+          path.relative(actionDir, hookBuild.outputDir),
+          '--target',
+          'es2022',
+        ],
+        {
+          cwd: actionDir,
+          stdio: 'inherit',
+        },
+      );
+
+      if (result.status !== 0) {
+        return result.status ?? 1;
+      }
+
+      renameSync(path.join(hookBuild.outputDir, 'index.js'), hookBuild.finalFile);
+      rmSync(hookBuild.outputDir, { recursive: true, force: true });
     }
   }
 
