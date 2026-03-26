@@ -81,8 +81,12 @@ my-action/
   action.yml
   src/
     index.ts
+    pre.ts      # optional
+    post.ts     # optional
   dist/
     index.js
+    pre.js      # generated when src/pre.ts exists
+    post.js     # generated when src/post.ts exists
     licenses.txt
 ```
 
@@ -95,6 +99,8 @@ description: Example action layout for this repository
 runs:
   using: node24
   main: dist/index.js
+  pre: dist/pre.js
+  post: dist/post.js
 ```
 
 Example usage after release:
@@ -116,7 +122,25 @@ artifact:
 CI installs dependencies with `pnpm install --frozen-lockfile`, so changes that require lockfile
 updates must include an updated `pnpm-lock.yaml`.
 
-The build treats any **top-level directory** that contains an `action.yml` as an action and builds it with `@vercel/ncc`. `src/index.ts` is the required entrypoint.
+The build treats any **top-level directory** that contains an `action.yml` as an action and builds it with `@vercel/ncc`.
+
+Build assumptions for root-managed actions:
+
+- `src/index.ts` is required and always builds to `dist/index.js`
+- `src/pre.ts` is optional and, when present, builds to `dist/pre.js`
+- `src/post.ts` is optional and, when present, builds to `dist/post.js`
+- `pnpm build` deletes each action's existing `dist/` directory before rebuilding generated output
+- `dist/licenses.txt` is generated from the main bundle build
+
+If an action declares JavaScript lifecycle hooks in `action.yml`, they should follow the same output convention:
+
+```yaml
+runs:
+  using: node24
+  main: dist/index.js
+  pre: dist/pre.js
+  post: dist/post.js
+```
 
 ### Release tags and floating majors
 
