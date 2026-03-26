@@ -1,8 +1,51 @@
 import { z } from 'zod';
 
 export type JsonObject = Record<string, unknown>;
+export type StringMap = Record<string, string>;
 
-const jsonObjectSchema: z.ZodType<JsonObject> = z.object({}).catchall(z.unknown());
+function parseMetadataEntries(entries: string[], ctx: z.RefinementCtx): StringMap | undefined {
+  if (entries.length === 0) {
+    return undefined;
+  }
+
+  const metadata: StringMap = {};
+
+  for (const entry of entries) {
+    const trimmedEntry = entry.trim();
+    if (trimmedEntry.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        fatal: true,
+        message: 'Input "metadata" entries must not be empty.',
+      });
+      return z.NEVER;
+    }
+
+    const separatorIndex = trimmedEntry.indexOf('=');
+    if (separatorIndex === -1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        fatal: true,
+        message: 'Input "metadata" entries must use key=value format.',
+      });
+      return z.NEVER;
+    }
+
+    const key = trimmedEntry.slice(0, separatorIndex).trim();
+    if (key.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        fatal: true,
+        message: 'Input "metadata" keys must not be blank.',
+      });
+      return z.NEVER;
+    }
+
+    metadata[key] = trimmedEntry.slice(separatorIndex + 1).trim();
+  }
+
+  return metadata;
+}
 
 const commonInputSchema = z.object({
   baseUrl: z
@@ -39,37 +82,9 @@ const mintFields = {
     return parsedValue;
   }),
   metadata: z
-    .string()
+    .array(z.string())
     .optional()
-    .transform((value, ctx) => {
-      if (!value?.trim()) {
-        return undefined;
-      }
-
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(value);
-      } catch {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          fatal: true,
-          message: 'Input "metadata" must be valid JSON.',
-        });
-        return z.NEVER;
-      }
-
-      const result = jsonObjectSchema.safeParse(parsed);
-      if (!result.success) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          fatal: true,
-          message: 'Input "metadata" must be a JSON object.',
-        });
-        return z.NEVER;
-      }
-
-      return result.data;
-    }),
+    .transform((value, ctx) => parseMetadataEntries(value ?? [], ctx)),
 };
 
 const revokeFields = {

@@ -19,7 +19,7 @@ inputs:
     required: false
     default: '5'
   metadata:
-    description: 'Optional JSON object merged into the LiteLLM metadata payload'
+    description: 'Optional newline-delimited key=value metadata entries merged into the LiteLLM metadata payload. The Github repo, PR, workflow and actor are already automatically added.'
     required: false
 outputs:
   api_key:

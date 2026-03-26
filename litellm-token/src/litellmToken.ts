@@ -16,7 +16,7 @@ export const mintedApiKeyStateKey = 'minted_api_key';
 export function getGitHubRuntimeMetadata(): JsonObject {
   const metadata: JsonObject = {};
 
-  assignIfSet(metadata, 'github_repository', process.env.GITHUB_REPOSITORY);
+  assignIfSet(metadata, 'github_repo', process.env.GITHUB_REPOSITORY);
   assignIfSet(metadata, 'github_workflow', process.env.GITHUB_WORKFLOW);
   assignIfSet(metadata, 'github_run_id', process.env.GITHUB_RUN_ID);
   assignIfSet(metadata, 'github_run_attempt', process.env.GITHUB_RUN_ATTEMPT);

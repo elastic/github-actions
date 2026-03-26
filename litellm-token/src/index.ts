@@ -10,7 +10,7 @@ export async function run() {
     models: core.getInput('models', { required: true }),
     keyTTL: core.getInput('key-ttl') || '15m',
     maxBudget: core.getInput('max-budget') || '5',
-    metadata: core.getInput('metadata') || undefined,
+    metadata: core.getMultilineInput('metadata', { trimWhitespace: true }),
   };
 
   core.setSecret(rawInputs.masterKey);

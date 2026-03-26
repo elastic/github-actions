@@ -45,7 +45,7 @@ describe('litellmToken', () => {
         const metadata = getGitHubRuntimeMetadata();
 
         expect(metadata).toEqual({
-          github_repository: 'elastic/kibana',
+          github_repo: 'elastic/kibana',
           github_workflow: 'reviewer:claude',
           github_run_id: '12345',
           github_run_attempt: '2',
@@ -94,32 +94,63 @@ describe('litellmToken', () => {
       expect(issueMessage).toBe('A mint operation requires at least one model.');
     });
 
-    it('throws when metadata is not valid JSON', () => {
-      const result = mintInputSchema.safeParse({
+    it('parses metadata entries into a flat string map', () => {
+      const parsed = mintInputSchema.parse({
         baseUrl: 'https://litellm.example.com',
         masterKey: 'sk-master',
         models: 'llm-gateway/claude-opus-4-5',
         keyTTL: '30m',
         maxBudget: '2.5',
-        metadata: '{not-json}',
+        metadata: ['purpose=claude-review', 'owner=security-ai', 'pr=1234'],
       });
 
-      const issueMessage = result.success ? undefined : result.error.issues[0]?.message;
-      expect(issueMessage).toBe('Input "metadata" must be valid JSON.');
+      expect(parsed.metadata).toEqual({
+        owner: 'security-ai',
+        pr: '1234',
+        purpose: 'claude-review',
+      });
     });
 
-    it('throws when metadata is not a JSON object', () => {
+    it('throws when metadata does not use key=value format', () => {
       const result = mintInputSchema.safeParse({
         baseUrl: 'https://litellm.example.com',
         masterKey: 'sk-master',
         models: 'llm-gateway/claude-opus-4-5',
         keyTTL: '30m',
         maxBudget: '2.5',
-        metadata: '["bad"]',
+        metadata: ['not-a-pair'],
       });
 
       const issueMessage = result.success ? undefined : result.error.issues[0]?.message;
-      expect(issueMessage).toBe('Input "metadata" must be a JSON object.');
+      expect(issueMessage).toBe('Input "metadata" entries must use key=value format.');
+    });
+
+    it('throws when a metadata key is blank', () => {
+      const result = mintInputSchema.safeParse({
+        baseUrl: 'https://litellm.example.com',
+        masterKey: 'sk-master',
+        models: 'llm-gateway/claude-opus-4-5',
+        keyTTL: '30m',
+        maxBudget: '2.5',
+        metadata: [' =claude-review'],
+      });
+
+      const issueMessage = result.success ? undefined : result.error.issues[0]?.message;
+      expect(issueMessage).toBe('Input "metadata" keys must not be blank.');
+    });
+
+    it('throws when a metadata entry is empty', () => {
+      const result = mintInputSchema.safeParse({
+        baseUrl: 'https://litellm.example.com',
+        masterKey: 'sk-master',
+        models: 'llm-gateway/claude-opus-4-5',
+        keyTTL: '30m',
+        maxBudget: '2.5',
+        metadata: ['purpose=claude-review', '   '],
+      });
+
+      const issueMessage = result.success ? undefined : result.error.issues[0]?.message;
+      expect(issueMessage).toBe('Input "metadata" entries must not be empty.');
     });
 
     it('throws when max-budget is not a valid number', () => {
@@ -160,7 +191,7 @@ describe('litellmToken', () => {
             models: 'llm-gateway/claude-opus-4-5',
             keyTTL: '30m',
             maxBudget: '2.5',
-            metadata: '{"purpose":"claude-review"}',
+            metadata: ['purpose=claude-review', 'owner=security-ai'],
           }),
         );
 
@@ -171,9 +202,10 @@ describe('litellmToken', () => {
             duration: '30m',
             max_budget: 2.5,
             metadata: expect.objectContaining({
-              github_repository: 'elastic/kibana',
+              github_repo: 'elastic/kibana',
               github_run_id: '12345',
               github_workflow_run_url: 'https://github.com/elastic/kibana/actions/runs/12345',
+              owner: 'security-ai',
               purpose: 'claude-review',
             }),
           }),
