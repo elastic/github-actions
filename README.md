@@ -109,6 +109,8 @@ directly from the repository ref they pin to. In this repository, `dist/` is tre
 artifact:
 
 - Pull requests are reviewed as source changes and must build successfully.
+- Trusted same-repo `release/**` pull requests that bump the root `package.json` version auto-update
+  committed `dist/` output on each push.
 - `master` auto-updates committed `dist/` output after merges.
 - Releases rebuild and fail if a fresh build would change committed output, so release tags always
   point to commits with up-to-date `dist/`.
@@ -118,14 +120,15 @@ updates must include an updated `pnpm-lock.yaml`.
 
 The build treats any **top-level directory** that contains an `action.yml` as an action and builds it with `@vercel/ncc`. `src/index.ts` is the required entrypoint.
 
-### Release tags, changelog, and floating majors
+### Release tags and floating majors
 
 The root [`package.json`](package.json) version is the release source of truth for this repository.
 
 To prepare a release:
 
-1. Open a pull request that bumps the root `package.json` `version` field.
-2. Merge the pull request to `master`.
+1. Open a same-repo pull request with a branch in the form of `release/**` that bumps the root `package.json` `version` field.
+2. Let CI auto-update committed `dist/` output on the release pull request as you push changes.
+3. Merge the pull request to `master`.
 
 After merge, the release workflow:
 

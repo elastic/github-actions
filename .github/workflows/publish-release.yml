@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   prepare:
+    if: github.event.repository.fork == false
     runs-on: ubuntu-latest
     outputs:
       should_release: ${{ steps.version.outputs.should_release }}

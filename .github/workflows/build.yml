@@ -58,5 +58,5 @@ jobs:
         run: pnpm build
 
       - name: Verify committed build output
-        if: ${{ inputs.verify_dist }}
+        if: ${{ inputs.verify_dist || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/')) }}
         run: git diff --exit-code
