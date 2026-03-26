@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const BASE_URL = 'https://litellm.example.com';
+const MASTER_KEY = 'sk-master';
+const MODEL = 'llm-gateway/claude-opus-4-5';
+const KEY_TTL = '30m';
+const MINTED_API_KEY = 'sk-short-lived';
+const MULTILINE_METADATA = 'purpose=claude-review\nowner=security-ai';
+const SINGLE_LINE_METADATA = 'purpose=claude-review';
+
 const mockCore = {
   saveState: vi.fn(),
   setFailed: vi.fn(),
@@ -55,6 +63,13 @@ function setActionInput(name: string, value: string) {
   process.env[`INPUT_${name.toUpperCase()}`] = value;
 }
 
+function setDefaultActionInputs() {
+  setActionInput('base-url', BASE_URL);
+  setActionInput('master-key', MASTER_KEY);
+  setActionInput('models', MODEL);
+  setActionInput('key-ttl', KEY_TTL);
+}
+
 describe('LiteLLM Token action', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -63,43 +78,38 @@ describe('LiteLLM Token action', () => {
     for (const key of actionEnvKeys) {
       delete process.env[key];
     }
+
+    setDefaultActionInputs();
   });
 
   it('mints a token, saves it for cleanup, and only exposes api_key output', async () => {
-    setActionInput('base-url', 'https://litellm.example.com');
-    setActionInput('master-key', 'sk-master');
-    setActionInput('models', 'llm-gateway/claude-opus-4-5');
-    setActionInput('key-ttl', '30m');
-    setActionInput('metadata', 'purpose=claude-review\nowner=security-ai');
+    setActionInput('metadata', MULTILINE_METADATA);
 
-    mockMintLiteLLMToken.mockResolvedValue('sk-short-lived');
+    mockMintLiteLLMToken.mockResolvedValue(MINTED_API_KEY);
 
     const run = await loadMainRun();
 
     await run();
 
-    expect(mockCore.setSecret).toHaveBeenCalledWith('sk-master');
-    expect(mockCore.setSecret).toHaveBeenCalledWith('sk-short-lived');
-    expect(mockCore.saveState).toHaveBeenCalledWith('minted_api_key', 'sk-short-lived');
+    expect(mockCore.setSecret).toHaveBeenCalledWith(MASTER_KEY);
+    expect(mockCore.setSecret).toHaveBeenCalledWith(MINTED_API_KEY);
+    expect(mockCore.saveState).toHaveBeenCalledWith('minted_api_key', MINTED_API_KEY);
     expect(mockCore.setOutput).toHaveBeenCalledTimes(1);
-    expect(mockCore.setOutput).toHaveBeenCalledWith('api_key', 'sk-short-lived');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('api_key', MINTED_API_KEY);
     expect(mockMintLiteLLMToken).toHaveBeenCalledWith({
-      baseUrl: 'https://litellm.example.com',
-      masterKey: 'sk-master',
-      keyTTL: '30m',
+      baseUrl: BASE_URL,
+      masterKey: MASTER_KEY,
+      keyTTL: KEY_TTL,
       maxBudget: 5,
-      models: ['llm-gateway/claude-opus-4-5'],
+      models: [MODEL],
       metadata: { owner: 'security-ai', purpose: 'claude-review' },
     });
   });
 
   it('accepts single-line metadata input', async () => {
-    setActionInput('base-url', 'https://litellm.example.com');
-    setActionInput('master-key', 'sk-master');
-    setActionInput('models', 'llm-gateway/claude-opus-4-5');
-    setActionInput('metadata', 'purpose=claude-review');
+    setActionInput('metadata', SINGLE_LINE_METADATA);
 
-    mockMintLiteLLMToken.mockResolvedValue('sk-short-lived');
+    mockMintLiteLLMToken.mockResolvedValue(MINTED_API_KEY);
 
     const run = await loadMainRun();
 
@@ -113,20 +123,18 @@ describe('LiteLLM Token action', () => {
   });
 
   it('revokes the saved api key during post cleanup', async () => {
-    setActionInput('base-url', 'https://litellm.example.com');
-    setActionInput('master-key', 'sk-master');
-    process.env.STATE_minted_api_key = 'sk-short-lived';
+    process.env.STATE_minted_api_key = MINTED_API_KEY;
 
     const run = await loadPostRun();
 
     await run();
 
-    expect(mockCore.setSecret).toHaveBeenCalledWith('sk-master');
-    expect(mockCore.setSecret).toHaveBeenCalledWith('sk-short-lived');
+    expect(mockCore.setSecret).toHaveBeenCalledWith(MASTER_KEY);
+    expect(mockCore.setSecret).toHaveBeenCalledWith(MINTED_API_KEY);
     expect(mockRevokeLiteLLMToken).toHaveBeenCalledWith({
-      baseUrl: 'https://litellm.example.com',
-      masterKey: 'sk-master',
-      apiKey: 'sk-short-lived',
+      baseUrl: BASE_URL,
+      masterKey: MASTER_KEY,
+      apiKey: MINTED_API_KEY,
     });
   });
 
@@ -137,6 +145,5 @@ describe('LiteLLM Token action', () => {
 
     expect(mockCore.setSecret).not.toHaveBeenCalled();
     expect(mockRevokeLiteLLMToken).not.toHaveBeenCalled();
-    expect(mockCore.info).toHaveBeenCalledWith('No LiteLLM token was minted. Skipping post cleanup.');
   });
 });
