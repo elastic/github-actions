@@ -32,7 +32,7 @@ export function getGitHubRuntimeMetadata(): JsonObject {
   return metadata;
 }
 
-export function buildMintRequestBody(inputs: MintInputs): JsonObject {
+function buildMintRequestBody(inputs: MintInputs): JsonObject {
   const requestBody: JsonObject = {
     models: inputs.models,
     duration: inputs.keyTTL,
