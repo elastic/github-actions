@@ -6,7 +6,7 @@
 
 ## Overview
 
-- elastic/github-actions is intended for the organization's Github Actions which are used for internal development.
+- elastic/github-actions is intended for the organization's internal GitHub Actions.
 - `project-assigner/` is deprecated and self-contained. Completely ignore it. That action should NOT be used for style references or toolchain usage. The root toolchains and workflows intentionally ignore it.
 
 ## Validation
