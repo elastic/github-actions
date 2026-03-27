@@ -217,9 +217,32 @@ describe('litellmToken', () => {
       const error = await getThrownError(mintLiteLLMToken(parseMintInput({ maxBudget: DEFAULT_BUDGET })));
 
       expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe('LiteLLM mint failed. HTTP 403: denied');
       expect(error.message).not.toContain(MASTER_KEY);
       expect(error.cause).toBeInstanceOf(AxiosError);
       expect((error.cause as AxiosError).response?.status).toBe(403);
+    });
+
+    it('surfaces nested LiteLLM auth errors from the response body', async () => {
+      vi.spyOn(axios, 'post').mockRejectedValue(
+        createAxiosError(
+          401,
+          {
+            error: {
+              message: 'Authentication Error, Only proxy admin can be used to generate keys.',
+            },
+          },
+          'Request failed',
+        ),
+      );
+
+      const error = await getThrownError(mintLiteLLMToken(parseMintInput({ maxBudget: DEFAULT_BUDGET })));
+
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe(
+        'LiteLLM mint failed. HTTP 401: Authentication Error, Only proxy admin can be used to generate keys.',
+      );
+      expect(error.message).not.toContain(MASTER_KEY);
     });
 
     it('throws when the mint response is not a JSON object', async () => {

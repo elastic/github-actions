@@ -100,9 +100,20 @@ export const mintResponseSchema = z.object({
   }),
 });
 
-export const errorResponseSchema = z.object({
-  message: z.string(),
-});
+export const errorResponseSchema = z
+  .union([
+    z.object({
+      message: z.string(),
+    }),
+    z.object({
+      error: z.object({
+        message: z.string(),
+      }),
+    }),
+  ])
+  .transform((value) => ({
+    message: 'message' in value ? value.message : value.error.message,
+  }));
 
 export type MintInputs = z.infer<typeof mintInputSchema>;
 export type RevokeInputs = z.infer<typeof revokeInputSchema>;

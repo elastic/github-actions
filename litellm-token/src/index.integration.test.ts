@@ -146,4 +146,18 @@ describe('LiteLLM Token action', () => {
     expect(mockCore.setSecret).not.toHaveBeenCalled();
     expect(mockRevokeLiteLLMToken).not.toHaveBeenCalled();
   });
+
+  it('does not auto-run the main entrypoint when imported in tests', async () => {
+    await import('./index');
+
+    expect(mockMintLiteLLMToken).not.toHaveBeenCalled();
+    expect(mockCore.setFailed).not.toHaveBeenCalled();
+  });
+
+  it('does not auto-run the post entrypoint when imported in tests', async () => {
+    await import('./post');
+
+    expect(mockRevokeLiteLLMToken).not.toHaveBeenCalled();
+    expect(mockCore.setFailed).not.toHaveBeenCalled();
+  });
 });

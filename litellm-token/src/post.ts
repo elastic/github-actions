@@ -1,3 +1,5 @@
+import * as path from 'node:path';
+
 import * as core from '@actions/core';
 
 import { revokeInputSchema } from './schema';
@@ -29,11 +31,14 @@ export async function run() {
   core.info('Revoked LiteLLM token.');
 }
 
-const isDirectExecution =
-  typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module;
+function isDirectExecution(): boolean {
+  const scriptPath = process.argv[1];
 
-if (isDirectExecution) {
-  run().catch((error) => {
+  return scriptPath !== undefined && typeof __filename !== 'undefined' && path.resolve(scriptPath) === __filename;
+}
+
+if (isDirectExecution()) {
+  void run().catch((error) => {
     core.setFailed(error instanceof Error ? error.message : 'Unexpected error');
   });
 }
