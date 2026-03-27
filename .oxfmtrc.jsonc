@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 110,
+  "semi": true,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "all",
+  "useTabs": false,
+  "overrides": [
+    {
+      "files": ["*.json", "*.jsonc"],
+      "options": {
+        /** 
+          There is a mismatch between the CLI and IDEs and which files are interpreted as JSON.
+          For example, tsconfig.json is loaded and formatted as JSONC by VS Code, but as JSON by the CLI.
+          Resulting in back and forth formatting and errors.
+        **/
+        "trailingComma": "none"
+      }
+    }
+  ],
+  "ignorePatterns": ["node_modules/**", "coverage/**", "project-assigner/**", "*/dist/**"]
+}

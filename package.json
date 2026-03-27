@@ -1,0 +1,37 @@
+{
+  "name": "elastic-github-actions",
+  "version": "3.0.0",
+  "description": "Elastic Organization GitHub Actions",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elastic/github-actions.git"
+  },
+  "scripts": {
+    "build": "tsx ./scripts/build-actions.ts",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint .",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "lodash": "^4.17.21",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "@vercel/ncc": "^0.38.4",
+    "memfs": "^4.56.11",
+    "oxfmt": "^0.41.0",
+    "oxlint": "^1.56.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  },
+  "engines": {
+    "node": "24.14.0"
+  },
+  "packageManager": "pnpm@10.32.1"
+}
