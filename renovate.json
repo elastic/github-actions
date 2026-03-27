@@ -14,7 +14,11 @@
   "separateMajorMinor": false,
   "rangeStrategy": "bump",
   "semanticCommits": "disabled",
+  "labels": ["dependencies"],
   "vulnerabilityAlerts": {
+    "enabled": false
+  },
+  "lockFileMaintenance": {
     "enabled": false
   },
   "packageRules": [
@@ -23,18 +27,55 @@
       "enabled": false
     },
     {
-      "groupName": "actions",
-      "matchBaseBranches": ["main"],
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true
+    },
+    {
+      "groupName": "workflows",
       "matchManagers": ["github-actions"],
-      "matchPackageNames": ["actions/checkout", "actions/setup-node"],
-      "enabled": true,
+      "matchPackageNames": ["actions/checkout", "actions/setup-node", "pnpm/action-setup"],
       "minimumReleaseAge": "14 days",
-      "labels": ["dependencies"]
+      "enabled": true
     },
     {
       "groupName": "oxc",
       "matchDepNames": ["oxlint", "oxfmt"],
-      "matchBaseBranches": ["main"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "vitest",
+      "matchDepNames": ["vitest", "memfs"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "typescript",
+      "matchDepNames": ["typescript", "tsx", "@types/**"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "build",
+      "matchDepNames": ["@vercel/ncc"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "actions",
+      "matchDepNames": ["@actions/core"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "lodash",
+      "matchDepNames": ["lodash"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "zod",
+      "matchDepNames": ["zod"],
       "minimumReleaseAge": "14 days",
       "enabled": true
     }
