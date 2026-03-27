@@ -5,6 +5,8 @@
     "helpers:pinGitHubActionDigests",
     "helpers:pinGitHubActionDigestsToSemver"
   ],
+  "baseBranches": ["master"],
+  "enabled": true,
   "enabledManagers": ["npm", "github-actions"],
   "ignorePaths": ["**/project-assigner/**"],
   "prConcurrentLimit": 0,
@@ -12,13 +14,29 @@
   "separateMajorMinor": false,
   "rangeStrategy": "bump",
   "semanticCommits": "disabled",
+  "vulnerabilityAlerts": {
+    "enabled": false
+  },
   "packageRules": [
     {
-      "groupName": "operations actions",
+      "matchDepPatterns": [".*"],
+      "enabled": false
+    },
+    {
+      "groupName": "actions",
+      "matchBaseBranches": ["main"],
       "matchManagers": ["github-actions"],
       "matchPackageNames": ["actions/checkout", "actions/setup-node"],
       "enabled": true,
-      "minimumReleaseAge": "14 days"
+      "minimumReleaseAge": "14 days",
+      "labels": ["dependencies"]
+    },
+    {
+      "groupName": "oxc",
+      "matchDepNames": ["oxlint", "oxfmt"],
+      "matchBaseBranches": ["main"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
     }
   ]
 }
