@@ -1,6 +1,117 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "local>elastic/renovate-config"
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    "helpers:pinGitHubActionDigestsToSemver"
+  ],
+  "baseBranches": ["master"],
+  "enabled": true,
+  "enabledManagers": ["npm", "github-actions", "nvm"],
+  "ignorePaths": ["**/project-assigner/**"],
+  "prConcurrentLimit": 0,
+  "prHourlyLimit": 0,
+  "separateMajorMinor": false,
+  "rangeStrategy": "bump",
+  "semanticCommits": "disabled",
+  "labels": ["dependencies"],
+  "vulnerabilityAlerts": {
+    "enabled": false
+  },
+  "lockFileMaintenance": {
+    "enabled": false
+  },
+  "packageRules": [
+    {
+      "matchDepPatterns": [".*"],
+      "enabled": false
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true
+    },
+    {
+      "groupName": "workflows",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["actions/checkout", "actions/setup-node", "pnpm/action-setup"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "nodejs",
+      "matchManagers": ["nvm"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "nodejs",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["engines"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "nodejs",
+      "matchManagers": ["github-actions"],
+      "matchDatasources": ["node-version"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "pnpm",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["packageManager"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "pnpm",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["pnpm"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "oxc",
+      "matchDepNames": ["oxlint", "oxfmt"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "vitest",
+      "matchDepNames": ["vitest", "memfs"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "typescript",
+      "matchDepNames": ["typescript", "tsx", "@types/**"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "build",
+      "matchDepNames": ["@vercel/ncc"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "actions",
+      "matchDepNames": ["@actions/core"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "lodash",
+      "matchDepNames": ["lodash"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    },
+    {
+      "groupName": "zod",
+      "matchDepNames": ["zod"],
+      "minimumReleaseAge": "14 days",
+      "enabled": true
+    }
   ]
 }
