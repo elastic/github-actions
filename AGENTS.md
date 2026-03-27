@@ -2,7 +2,7 @@
 
 ## Setup
 
-- Use the repo-pinned toolchain versions for `NodeJS` and `pnpm`. Consult the root `package.json` for the required versions.
+- Use the repo-pinned toolchain versions for `Node.js` and `pnpm`. Consult the root `package.json` for the required versions.
 
 ## Overview
 
