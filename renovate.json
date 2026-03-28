@@ -5,7 +5,7 @@
     "helpers:pinGitHubActionDigests",
     "helpers:pinGitHubActionDigestsToSemver"
   ],
-  "baseBranches": ["master"],
+  "baseBranchPatterns": ["master"],
   "enabled": true,
   "enabledManagers": ["npm", "github-actions", "nvm"],
   "ignorePaths": ["**/project-assigner/**"],
@@ -15,21 +15,11 @@
   "rangeStrategy": "bump",
   "semanticCommits": "disabled",
   "labels": ["dependencies"],
-  "vulnerabilityAlerts": {
-    "enabled": false
-  },
-  "lockFileMaintenance": {
-    "enabled": false
-  },
+  "vulnerabilityAlerts": { "enabled": false },
+  "lockFileMaintenance": { "enabled": false },
   "packageRules": [
-    {
-      "matchDepPatterns": [".*"],
-      "enabled": false
-    },
-    {
-      "matchDepTypes": ["devDependencies"],
-      "automerge": true
-    },
+    { "enabled": false, "matchDepNames": ["/.*/"] },
+    { "matchDepTypes": ["devDependencies"], "automerge": true },
     {
       "groupName": "workflows",
       "matchManagers": ["github-actions"],
