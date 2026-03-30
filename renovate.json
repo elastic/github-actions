@@ -5,7 +5,7 @@
     "helpers:pinGitHubActionDigests",
     "helpers:pinGitHubActionDigestsToSemver"
   ],
-  "baseBranchPatterns": ["master"],
+  "baseBranches": ["master"],
   "enabled": true,
   "enabledManagers": ["npm", "github-actions", "nvm"],
   "ignorePaths": ["**/project-assigner/**"],
