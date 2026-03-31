@@ -47,13 +47,6 @@
       "enabled": true
     },
     {
-      "groupName": "pnpm",
-      "matchManagers": ["github-actions"],
-      "matchPackageNames": ["pnpm"],
-      "minimumReleaseAge": "7 days",
-      "enabled": true
-    },
-    {
       "groupName": "oxc",
       "matchDepNames": ["oxlint", "oxfmt"],
       "minimumReleaseAge": "14 days",
