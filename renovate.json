@@ -29,35 +29,35 @@
     {
       "groupName": "nodejs",
       "matchManagers": ["nvm"],
-      "minimumReleaseAge": "14 days",
+      "minimumReleaseAge": "7 days",
       "enabled": true
     },
     {
       "groupName": "nodejs",
       "matchManagers": ["npm"],
       "matchDepTypes": ["engines"],
-      "minimumReleaseAge": "14 days",
+      "minimumReleaseAge": "7 days",
       "enabled": true
     },
     {
       "groupName": "nodejs",
       "matchManagers": ["github-actions"],
       "matchDatasources": ["node-version"],
-      "minimumReleaseAge": "14 days",
+      "minimumReleaseAge": "7 days",
       "enabled": true
     },
     {
       "groupName": "pnpm",
       "matchManagers": ["npm"],
       "matchDepTypes": ["packageManager"],
-      "minimumReleaseAge": "14 days",
+      "minimumReleaseAge": "7 days",
       "enabled": true
     },
     {
       "groupName": "pnpm",
       "matchManagers": ["github-actions"],
       "matchPackageNames": ["pnpm"],
-      "minimumReleaseAge": "14 days",
+      "minimumReleaseAge": "7 days",
       "enabled": true
     },
     {
