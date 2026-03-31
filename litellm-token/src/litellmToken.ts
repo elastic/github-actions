@@ -1,4 +1,3 @@
-import axios, { isAxiosError, type AxiosError } from 'axios';
 import { readFileSync } from 'node:fs';
 
 import {
@@ -52,58 +51,49 @@ function buildMintRequestBody(inputs: MintInputs): JsonObject {
 }
 
 export async function mintLiteLLMToken(inputs: MintInputs): Promise<string> {
-  let response;
   try {
-    response = await axios.post(
+    const responseBody = await postJson(
       `${inputs.baseUrl}/key/generate`,
       buildMintRequestBody(inputs),
-      buildRequestConfig(inputs.masterKey),
+      inputs.masterKey,
     );
+
+    const parsedResponse = mintResponseSchema.safeParse(responseBody);
+    if (!parsedResponse.success) {
+      throw new Error(
+        parsedResponse.error.issues[0]?.path[0] === 'key'
+          ? (parsedResponse.error.issues[0]?.message ?? 'LiteLLM mint response key was missing or empty.')
+          : 'LiteLLM mint response was not a JSON object.',
+      );
+    }
+
+    return parsedResponse.data.key;
   } catch (error) {
-    throw wrapAxiosError(error, 'LiteLLM mint failed');
+    throw wrapRequestError(error, 'LiteLLM mint failed');
   }
-
-  const parsedResponse = mintResponseSchema.safeParse(response.data);
-  if (!parsedResponse.success) {
-    throw new Error(
-      parsedResponse.error.issues[0]?.path[0] === 'key'
-        ? (parsedResponse.error.issues[0]?.message ?? 'LiteLLM mint response key was missing or empty.')
-        : 'LiteLLM mint response was not a JSON object.',
-    );
-  }
-
-  return parsedResponse.data.key;
 }
 
 export async function revokeLiteLLMToken(inputs: RevokeInputs): Promise<void> {
   try {
-    await axios.post(
-      `${inputs.baseUrl}/key/delete`,
-      { keys: [inputs.apiKey] },
-      buildRequestConfig(inputs.masterKey),
-    );
+    await postJson(`${inputs.baseUrl}/key/delete`, { keys: [inputs.apiKey] }, inputs.masterKey);
     return;
   } catch (deleteError) {
     if (!isRecoverableRevokeError(deleteError)) {
-      throw wrapAxiosError(deleteError, 'LiteLLM revoke failed while deleting api key');
+      throw wrapRequestError(deleteError, 'LiteLLM revoke failed while deleting api key');
     }
 
-    const deleteMessage = `delete by api key: ${formatAxiosError(deleteError)}`;
+    const deleteMessage = `delete by api key: ${formatRequestError(deleteError)}`;
 
     try {
-      await axios.post(
-        `${inputs.baseUrl}/key/block`,
-        { key: inputs.apiKey },
-        buildRequestConfig(inputs.masterKey),
-      );
+      await postJson(`${inputs.baseUrl}/key/block`, { key: inputs.apiKey }, inputs.masterKey);
       return;
     } catch (blockError) {
       if (!isRecoverableRevokeError(blockError)) {
-        throw wrapAxiosError(blockError, 'LiteLLM revoke failed while blocking api key');
+        throw wrapRequestError(blockError, 'LiteLLM revoke failed while blocking api key');
       }
 
       throw new Error(
-        `LiteLLM token cleanup did not confirm revocation: ${deleteMessage} | block by api key: ${formatAxiosError(
+        `LiteLLM token cleanup did not confirm revocation: ${deleteMessage} | block by api key: ${formatRequestError(
           blockError,
         )}`,
         { cause: blockError },
@@ -149,39 +139,87 @@ function assignIfSet(target: JsonObject, key: string, value: string | undefined)
   }
 }
 
-function buildRequestConfig(masterKey: string) {
+function buildRequestInit(body: JsonObject, masterKey: string): RequestInit {
   return {
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${masterKey}`,
       'Content-Type': 'application/json',
     },
-    timeout: REQUEST_TIMEOUT_MS,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   };
 }
 
-function isRecoverableRevokeError(error: unknown): error is AxiosError {
-  if (!isAxiosError(error)) {
+async function postJson(url: string, body: JsonObject, masterKey: string): Promise<unknown> {
+  try {
+    const response = await fetch(url, buildRequestInit(body, masterKey));
+    const responseBody = await parseResponseBody(response);
+    if (!response.ok) {
+      throw new LiteLLMRequestError(response.statusText || 'Request failed', {
+        data: responseBody,
+        status: response.status,
+      });
+    }
+
+    return responseBody;
+  } catch (error) {
+    if (error instanceof LiteLLMRequestError) {
+      throw error;
+    }
+
+    if (error instanceof Error) {
+      throw new LiteLLMRequestError(error.message, { cause: error });
+    }
+
+    throw error;
+  }
+}
+
+async function parseResponseBody(response: Response): Promise<unknown> {
+  const rawBody = await response.text();
+  if (rawBody.length === 0) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(rawBody) as unknown;
+  } catch {
+    return rawBody;
+  }
+}
+
+function isRecoverableRevokeError(error: unknown): error is LiteLLMRequestError {
+  if (!(error instanceof LiteLLMRequestError)) {
     return false;
   }
 
-  const status = error.response?.status;
-  return status === 400 || status === 404 || status === 422;
+  return error.status === 400 || error.status === 404 || error.status === 422;
 }
 
-function formatAxiosError(error: AxiosError): string {
-  const status = error.response?.status;
-  const data = error.response?.data;
-  const parsedData = errorResponseSchema.safeParse(data);
-  const responseMessage =
-    typeof data === 'string' ? data : parsedData.success ? parsedData.data.message : error.message;
+function formatRequestError(error: LiteLLMRequestError): string {
+  const parsedData = errorResponseSchema.safeParse(error.data);
+  const responseMessage = parsedData.success ? parsedData.data.message : error.message;
 
-  return status ? `HTTP ${status}: ${responseMessage}` : responseMessage;
+  return error.status ? `HTTP ${error.status}: ${responseMessage}` : responseMessage;
 }
 
-function wrapAxiosError(error: unknown, prefix: string): Error {
-  if (!isAxiosError(error)) {
+function wrapRequestError(error: unknown, prefix: string): Error {
+  if (!(error instanceof LiteLLMRequestError)) {
     return error instanceof Error ? error : new Error(prefix);
   }
 
-  return new Error(`${prefix}. ${formatAxiosError(error)}`, { cause: error });
+  return new Error(`${prefix}. ${formatRequestError(error)}`, { cause: error });
+}
+
+class LiteLLMRequestError extends Error {
+  readonly data: unknown;
+  readonly status?: number;
+
+  constructor(message: string, options: { cause?: unknown; data?: unknown; status?: number } = {}) {
+    super(message, { cause: options.cause });
+    this.name = 'LiteLLMRequestError';
+    this.data = options.data;
+    this.status = options.status;
+  }
 }

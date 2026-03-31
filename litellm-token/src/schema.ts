@@ -102,6 +102,7 @@ export const mintResponseSchema = z.object({
 
 export const errorResponseSchema = z
   .union([
+    z.string(),
     z.object({
       message: z.string(),
     }),
@@ -112,7 +113,7 @@ export const errorResponseSchema = z
     }),
   ])
   .transform((value) => ({
-    message: 'message' in value ? value.message : value.error.message,
+    message: typeof value === 'string' ? value : 'message' in value ? value.message : value.error.message,
   }));
 
 export type MintInputs = z.infer<typeof mintInputSchema>;

@@ -1,8 +1,7 @@
-import axios, { AxiosError } from 'axios';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 
 import { getGitHubRuntimeMetadata, mintLiteLLMToken, revokeLiteLLMToken } from './litellmToken';
 import { mintInputSchema, revokeInputSchema } from './schema';
@@ -168,9 +167,9 @@ describe('litellmToken', () => {
         GITHUB_RUN_ID: process.env.GITHUB_RUN_ID,
         GITHUB_SERVER_URL: process.env.GITHUB_SERVER_URL,
       };
-      const postSpy = vi.spyOn(axios, 'post').mockResolvedValue({
-        data: { key: GENERATED_API_KEY },
-      } as Awaited<ReturnType<typeof axios.post>>);
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(createJsonResponse({ key: GENERATED_API_KEY }));
 
       try {
         process.env.GITHUB_REPOSITORY = GITHUB_REPOSITORY;
@@ -179,28 +178,18 @@ describe('litellmToken', () => {
 
         const apiKey = await mintLiteLLMToken(parseMintInput({ metadata: REVIEW_METADATA }));
 
-        expect(postSpy).toHaveBeenCalledWith(
-          `${BASE_URL}/key/generate`,
-          expect.objectContaining({
-            models: [MODEL],
-            duration: KEY_TTL,
-            max_budget: 2.5,
-            metadata: expect.objectContaining({
-              github_repo: GITHUB_REPOSITORY,
-              github_run_id: GITHUB_RUN_ID,
-              github_workflow_run_url: `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`,
-              owner: 'security-ai',
-              purpose: 'claude-review',
-            }),
+        expectFetchRequest(fetchSpy, 0, `${BASE_URL}/key/generate`, {
+          models: [MODEL],
+          duration: KEY_TTL,
+          max_budget: 2.5,
+          metadata: expect.objectContaining({
+            github_repo: GITHUB_REPOSITORY,
+            github_run_id: GITHUB_RUN_ID,
+            github_workflow_run_url: `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`,
+            owner: 'security-ai',
+            purpose: 'claude-review',
           }),
-          {
-            headers: {
-              Authorization: `Bearer ${MASTER_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            timeout: 30_000,
-          },
-        );
+        });
         expect(apiKey).toBe(GENERATED_API_KEY);
       } finally {
         restoreEnvVar('GITHUB_REPOSITORY', originalEnv.GITHUB_REPOSITORY);
@@ -210,29 +199,28 @@ describe('litellmToken', () => {
     });
 
     it('wraps mint transport failures without exposing the master key', async () => {
-      vi.spyOn(axios, 'post').mockRejectedValue(
-        createAxiosError(403, { message: 'denied' }, 'Request failed'),
-      );
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(createTextResponse('denied', { status: 403 }));
 
       const error = await getThrownError(mintLiteLLMToken(parseMintInput({ maxBudget: DEFAULT_BUDGET })));
 
       expect(error).toBeInstanceOf(Error);
       expect(error.message).toBe('LiteLLM mint failed. HTTP 403: denied');
       expect(error.message).not.toContain(MASTER_KEY);
-      expect(error.cause).toBeInstanceOf(AxiosError);
-      expect((error.cause as AxiosError).response?.status).toBe(403);
+      expect(error.cause).toMatchObject({
+        name: 'LiteLLMRequestError',
+        status: 403,
+      });
     });
 
     it('surfaces nested LiteLLM auth errors from the response body', async () => {
-      vi.spyOn(axios, 'post').mockRejectedValue(
-        createAxiosError(
-          401,
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        createJsonResponse(
           {
             error: {
               message: 'Authentication Error, Only proxy admin can be used to generate keys.',
             },
           },
-          'Request failed',
+          { status: 401 },
         ),
       );
 
@@ -246,9 +234,7 @@ describe('litellmToken', () => {
     });
 
     it('throws when the mint response is not a JSON object', async () => {
-      vi.spyOn(axios, 'post').mockResolvedValue({
-        data: ['bad-response'],
-      } as Awaited<ReturnType<typeof axios.post>>);
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(createJsonResponse(['bad-response']));
 
       await expect(mintLiteLLMToken(parseMintInput({ maxBudget: DEFAULT_BUDGET }))).rejects.toBeInstanceOf(
         Error,
@@ -256,9 +242,7 @@ describe('litellmToken', () => {
     });
 
     it('throws when the mint response key is blank', async () => {
-      vi.spyOn(axios, 'post').mockResolvedValue({
-        data: { key: '   ' },
-      } as Awaited<ReturnType<typeof axios.post>>);
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(createJsonResponse({ key: '   ' }));
 
       await expect(mintLiteLLMToken(parseMintInput({ maxBudget: DEFAULT_BUDGET }))).rejects.toBeInstanceOf(
         Error,
@@ -268,73 +252,42 @@ describe('litellmToken', () => {
 
   describe('revokeLiteLLMToken', () => {
     it('deletes the api key when delete succeeds', async () => {
-      const postSpy = vi.spyOn(axios, 'post').mockResolvedValue({
-        data: { deleted: true },
-      } as Awaited<ReturnType<typeof axios.post>>);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(createJsonResponse({ deleted: true }));
 
       await revokeLiteLLMToken(parseRevokeInput());
 
-      expect(postSpy).toHaveBeenCalledTimes(1);
-      expect(postSpy).toHaveBeenCalledWith(
-        `${BASE_URL}/key/delete`,
-        { keys: [GENERATED_API_KEY] },
-        {
-          headers: {
-            Authorization: `Bearer ${MASTER_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          timeout: 30_000,
-        },
-      );
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expectFetchRequest(fetchSpy, 0, `${BASE_URL}/key/delete`, { keys: [GENERATED_API_KEY] });
     });
 
     it('blocks the api key when delete fails recoverably', async () => {
-      const postSpy = vi
-        .spyOn(axios, 'post')
-        .mockRejectedValueOnce(createAxiosError(404, { message: 'key not found' }))
-        .mockResolvedValueOnce({
-          data: { blocked: true },
-        } as Awaited<ReturnType<typeof axios.post>>);
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(createJsonResponse({ message: 'key not found' }, { status: 404 }))
+        .mockResolvedValueOnce(createJsonResponse({ blocked: true }));
 
       await revokeLiteLLMToken(parseRevokeInput());
 
-      expect(postSpy).toHaveBeenCalledTimes(2);
-      expect(postSpy).toHaveBeenNthCalledWith(
-        1,
-        `${BASE_URL}/key/delete`,
-        { keys: [GENERATED_API_KEY] },
-        {
-          headers: {
-            Authorization: `Bearer ${MASTER_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          timeout: 30_000,
-        },
-      );
-      expect(postSpy).toHaveBeenNthCalledWith(
-        2,
-        `${BASE_URL}/key/block`,
-        { key: GENERATED_API_KEY },
-        {
-          headers: {
-            Authorization: `Bearer ${MASTER_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          timeout: 30_000,
-        },
-      );
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expectFetchRequest(fetchSpy, 0, `${BASE_URL}/key/delete`, { keys: [GENERATED_API_KEY] });
+      expectFetchRequest(fetchSpy, 1, `${BASE_URL}/key/block`, { key: GENERATED_API_KEY });
     });
 
     it('throws combined diagnostics when delete and block both fail recoverably', async () => {
-      vi.spyOn(axios, 'post')
-        .mockRejectedValueOnce(createAxiosError(404, { message: 'api key not found' }))
-        .mockRejectedValueOnce(createAxiosError(400, { message: 'already blocked' }));
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(createJsonResponse({ message: 'api key not found' }, { status: 404 }))
+        .mockResolvedValueOnce(createJsonResponse({ message: 'already blocked' }, { status: 400 }));
 
       const error = await getThrownError(revokeLiteLLMToken(parseRevokeInput()));
 
       expect(error).toBeInstanceOf(Error);
-      expect(error.cause).toBeInstanceOf(AxiosError);
-      expect((error.cause as AxiosError).response?.status).toBe(400);
+      expect(error.message).toBe(
+        'LiteLLM token cleanup did not confirm revocation: delete by api key: HTTP 404: api key not found | block by api key: HTTP 400: already blocked',
+      );
+      expect(error.cause).toMatchObject({
+        name: 'LiteLLMRequestError',
+        status: 400,
+      });
     });
   });
 });
@@ -382,21 +335,38 @@ async function getThrownError(promise: Promise<unknown>) {
   throw new Error('Expected promise to reject.');
 }
 
-function createAxiosError(status: number, data: unknown, message = 'Request failed'): AxiosError {
-  return new AxiosError(
-    message,
-    'ERR_BAD_REQUEST',
-    {
-      headers: { Authorization: 'Bearer sk-master' },
-      timeout: 30_000,
-    } as any,
-    undefined,
-    {
-      status,
-      data,
-      statusText: 'Request failed',
-      headers: {},
-      config: {} as any,
-    } as any,
-  );
+function createJsonResponse(body: unknown, init: ResponseInit = {}): Response {
+  return new Response(JSON.stringify(body), {
+    headers: { 'Content-Type': 'application/json' },
+    status: 200,
+    ...init,
+  });
+}
+
+function createTextResponse(body: string, init: ResponseInit = {}): Response {
+  return new Response(body, {
+    headers: { 'Content-Type': 'text/plain' },
+    status: 200,
+    ...init,
+  });
+}
+
+function expectFetchRequest(
+  fetchSpy: MockInstance<typeof fetch>,
+  callIndex: number,
+  expectedUrl: string,
+  expectedBody: unknown,
+) {
+  const requestCall = fetchSpy.mock.calls[callIndex];
+  expect(requestCall).toBeDefined();
+
+  const [actualUrl, actualInit] = requestCall as [string, RequestInit];
+  expect(actualUrl).toBe(expectedUrl);
+  expect(actualInit.method).toBe('POST');
+  expect(actualInit.headers).toEqual({
+    Authorization: `Bearer ${MASTER_KEY}`,
+    'Content-Type': 'application/json',
+  });
+  expect(actualInit.signal).toBeInstanceOf(AbortSignal);
+  expect(JSON.parse(String(actualInit.body))).toEqual(expectedBody);
 }
