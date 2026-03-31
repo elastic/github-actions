@@ -15,7 +15,7 @@ importers:
         specifier: ^4.17.21
         version: 4.17.23
       zod:
-        specifier: ^4.1.12
+        specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
       '@types/node':
