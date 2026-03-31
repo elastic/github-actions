@@ -18,7 +18,7 @@
   "dependencies": {
     "@actions/core": "^3.0.0",
     "lodash": "^4.17.23",
-    "zod": "^4.1.12"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^24.12.0",
