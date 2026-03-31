@@ -40,13 +40,6 @@
       "enabled": true
     },
     {
-      "groupName": "nodejs",
-      "matchManagers": ["github-actions"],
-      "matchDatasources": ["node-version"],
-      "minimumReleaseAge": "7 days",
-      "enabled": true
-    },
-    {
       "groupName": "pnpm",
       "matchManagers": ["npm"],
       "matchDepTypes": ["packageManager"],
