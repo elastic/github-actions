@@ -18,12 +18,12 @@ Examples:
 
 ```yaml
 steps:
-  - uses: elastic/github-actions/project-assigner@v2.1.1
+  - uses: elastic/github-actions/litellm-token@v2.1.1
 ```
 
 ```yaml
 steps:
-  - uses: elastic/github-actions/project-assigner@f443b600d91635bebf5b0d9ebc620189c0d6fba5 # v2.1.1
+  - uses: elastic/github-actions/litellm-token@f443b600d91635bebf5b0d9ebc620189c0d6fba5 # v2.1.1
 ```
 
 The `@<ref>` portion is always a repository ref. That means a tag, branch, or SHA points to a
@@ -35,7 +35,7 @@ that commit.
 Because refs are repository-wide, action usage looks path-scoped but versioning is commit-scoped.
 In practice, this means:
 
-- `elastic/github-actions/project-assigner@v2.1.1` uses the `project-assigner/` directory from
+- `elastic/github-actions/litellm-token@v2.1.1` uses the `litellm-token/` directory from
   the repo tag `v2.1.1`
 - `elastic/github-actions/my-action@v1.0.0` would use the `my-action/`
   directory from the repo tag `v1.0.0`
@@ -48,7 +48,7 @@ jobs:
   first_job:
     runs-on: ubuntu-latest
     steps:
-      - uses: elastic/github-actions/project-assigner@abc123
+      - uses: elastic/github-actions/litellm-token@abc123
 
   second_job:
     runs-on: ubuntu-latest
