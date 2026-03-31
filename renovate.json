@@ -19,7 +19,6 @@
   "lockFileMaintenance": { "enabled": false },
   "packageRules": [
     { "enabled": false, "matchDepNames": ["/.*/"] },
-    { "matchDepTypes": ["devDependencies"], "automerge": true },
     {
       "groupName": "workflows",
       "matchManagers": ["github-actions"],
