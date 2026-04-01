@@ -1,5 +1,9 @@
 # Project Assigner GitHub Action
 
+## Deprecation notice
+
+This action is deprecated because GitHub Classic Projects were sunset in April 2025. Starting with the next patch release, the action logs a warning at runtime and it will be removed in the next major release. See https://github.com/elastic/github-actions/issues/66 for the tracking issue.
+
 This is a GitHub action, implemented in JavaScript, which does the following:
   - Assigns an issue or pull request to a project when a specified label is applied
   - Removes an issue or pull request from a project when a specified label is removed
