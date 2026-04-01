@@ -3,7 +3,13 @@ const github = require('@actions/github');
 const { graphql } = require("@octokit/graphql");
 const _ = require('lodash');
 
+const DEPRECATION_WARNING = 'Project Assigner is deprecated because GitHub Classic Projects were sunset in April 2025. See https://github.com/elastic/github-actions/issues/66. This action will be removed in the next major release.';
+
 class ProjectAssigner {
+    warnDeprecation() {
+        console.warn(DEPRECATION_WARNING);
+    }
+
     // Label added to an issue or PR. Add a project card for the item into the desired column.
     async handleLabeled(octokit, projectNumber, columnName, labelToMatch, projectScope, context) {
         if (context.labelName == labelToMatch) {
@@ -260,6 +266,7 @@ class ProjectAssigner {
     }
 
     async run() {
+        this.warnDeprecation();
         const ghToken = core.getInput('ghToken');
         const octokit = graphql.defaults({
             headers: {
