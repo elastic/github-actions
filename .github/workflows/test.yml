@@ -2,15 +2,11 @@ name: Test
 
 on:
   pull_request:
-    paths-ignore:
-      - 'project-assigner/**'
   merge_group:
     types: [checks_requested]
   push:
     branches:
       - master
-    paths-ignore:
-      - 'project-assigner/**'
   workflow_call:
     inputs:
       ref:

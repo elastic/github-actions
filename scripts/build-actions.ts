@@ -4,14 +4,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-export const ignoredDirs = new Set([
-  '.git',
-  '.github',
-  'coverage',
-  'node_modules',
-  'project-assigner',
-  'scripts',
-]);
+export const ignoredDirs = new Set(['.git', '.github', 'coverage', 'node_modules', 'scripts']);
 
 type BuildSpawn = (
   command: string,

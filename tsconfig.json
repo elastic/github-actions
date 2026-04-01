@@ -13,5 +13,5 @@
     "types": ["node"]
   },
   "include": ["*/src/**/*.ts", "*/**/*.test.ts", "*/**/*.spec.ts", "scripts/**/*.ts", "vitest.config.ts"],
-  "exclude": ["node_modules", "coverage", "project-assigner", "*/dist/**"]
+  "exclude": ["node_modules", "coverage", "*/dist/**"]
 }
