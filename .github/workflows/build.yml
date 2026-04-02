@@ -2,15 +2,11 @@ name: Build
 
 on:
   pull_request:
-    paths-ignore:
-      - 'project-assigner/**'
   merge_group:
     types: [checks_requested]
   push:
     branches:
       - master
-    paths-ignore:
-      - 'project-assigner/**'
   workflow_call:
     inputs:
       ref:
@@ -58,5 +54,13 @@ jobs:
         run: pnpm build
 
       - name: Verify committed build output
-        if: ${{ inputs.verify_dist }}
+        if: >-
+          ${{
+            inputs.verify_dist ||
+            (
+              github.event_name == 'pull_request' &&
+              github.event.pull_request.head.repo.full_name == github.repository &&
+              startsWith(github.head_ref, 'release/')
+            )
+          }}
         run: git diff --exit-code

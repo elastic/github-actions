@@ -1,10 +1,9 @@
 # Elastic GitHub Actions
 
 This repository contains GitHub Actions maintained by the Elastic Organization. Each action lives in
-its own top-level directory, such as `project-assigner/`.
+its own top-level directory.
 
-`project-assigner/` is the existing legacy action in this repository and remains self-contained.
-Additional actions can be added alongside it as new top-level directories.
+Additional actions can be added as new top-level directories.
 
 ## Using Actions From This Repo
 
@@ -37,8 +36,8 @@ In practice, this means:
 
 - `elastic/github-actions/litellm-token@v2.1.1` uses the `litellm-token/` directory from
   the repo tag `v2.1.1`
-- `elastic/github-actions/my-action@v1.0.0` would use the `my-action/`
-  directory from the repo tag `v1.0.0`
+- `elastic/github-actions/another-action@v3.0.0` would use the `another-action/`
+  directory from the repo tag `v3.0.0`
 - SHA pinning is supported and recommended when consumers want an immutable reference
 
 Different actions in this repository can be referenced at different SHAs if needed:
@@ -48,12 +47,12 @@ jobs:
   first_job:
     runs-on: ubuntu-latest
     steps:
-      - uses: elastic/github-actions/litellm-token@abc123
+      - uses: elastic/github-actions/litellm-token@abc123 # v3.1.0
 
   second_job:
     runs-on: ubuntu-latest
     steps:
-      - uses: elastic/github-actions/my-action@def456
+      - uses: elastic/github-actions/action-two@def456 # v3.0.0
 ```
 
 ## Development
@@ -115,6 +114,8 @@ directly from the repository ref they pin to. In this repository, `dist/` is tre
 artifact:
 
 - Pull requests are reviewed as source changes and must build successfully.
+- Trusted same-repo `release/**` pull requests that bump the root `package.json` version auto-update
+  committed `dist/` output on each push.
 - `master` auto-updates committed `dist/` output after merges.
 - Releases rebuild and fail if a fresh build would change committed output, so release tags always
   point to commits with up-to-date `dist/`.
@@ -144,4 +145,17 @@ runs:
 
 ### Release tags and floating majors
 
-Releases are created via the `Release` workflow with a `version` like `v3.0.0`. In addition to creating the `vX.Y.Z` tag and GitHub release, it **force-updates** the floating major tag (for example `v3`).
+The root [`package.json`](package.json) version is the release source of truth for this repository.
+
+To prepare a release:
+
+1. Open a same-repo pull request with a branch in the form of `release/**` that bumps the root `package.json` `version` field.
+2. Let CI auto-update committed `dist/` output on the release pull request as you push changes.
+3. Merge the pull request to `master`.
+
+After merge, the release workflow:
+
+- reads the merged package version and creates the matching `vX.Y.Z` tag
+- generates release notes automatically with GitHub
+- uses [`.github/release.yml`](.github/release.yml) labels and categories to section the release page
+- force-updates the floating major tag (for example `v3`)

@@ -28,7 +28,7 @@ describe('getActionDirs', () => {
       '/repo/alpha/action.yml': '',
       '/repo/beta/README.md': '',
       '/repo/.github/action.yml': '',
-      '/repo/project-assigner/action.yml': '',
+      '/repo/coverage/action.yml': '',
       '/repo/scripts/action.yml': '',
     });
 

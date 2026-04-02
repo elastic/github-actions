@@ -1,17 +1,17 @@
 # elastic/github-actions
 
-## Setup
+## Setup - CRITICAL
 
-- Use the repo-pinned toolchain versions for `Node.js` and `pnpm`. Consult the root `package.json` for the required versions.
+- ALWAYS use the repo-pinned toolchain versions for `Node.js` and `pnpm`. ALWAYS verify the root `package.json` for the required `engines` and `packageManager`.
 
 ## Overview
 
 - elastic/github-actions is intended for the organization's internal GitHub Actions.
-- `project-assigner/` is deprecated and self-contained. Completely ignore it. That action should NOT be used for style references or toolchain usage. The root toolchains and workflows intentionally ignore it.
+- Workflows are defined at the repo root in their own directories.
 
 ## Validation
 
-- When changing a root-managed action or the root build/test setup, ALWAYS run the checks from the repo root: `pnpm format`, `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
+- When changing a action or the build/test setup, ALWAYS run the checks from the repo root: `pnpm format`, `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
 - All checks MUST pass before any changes are considered complete.
 
 ## Contribution Hygiene
