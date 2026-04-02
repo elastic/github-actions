@@ -1,10 +1,9 @@
 # Elastic GitHub Actions
 
 This repository contains GitHub Actions maintained by the Elastic Organization. Each action lives in
-its own top-level directory, such as `project-assigner/`.
+its own top-level directory.
 
-`project-assigner/` is the existing legacy action in this repository and remains self-contained.
-Additional actions can be added alongside it as new top-level directories.
+Additional actions can be added as new top-level directories.
 
 ## Using Actions From This Repo
 
@@ -18,12 +17,12 @@ Examples:
 
 ```yaml
 steps:
-  - uses: elastic/github-actions/project-assigner@v2.1.1
+  - uses: elastic/github-actions/my-action@v1.0.0
 ```
 
 ```yaml
 steps:
-  - uses: elastic/github-actions/project-assigner@f443b600d91635bebf5b0d9ebc620189c0d6fba5 # v2.1.1
+  - uses: elastic/github-actions/my-action@abc123def4567890abc123def4567890abc123de # v1.0.0
 ```
 
 The `@<ref>` portion is always a repository ref. That means a tag, branch, or SHA points to a
@@ -35,10 +34,10 @@ that commit.
 Because refs are repository-wide, action usage looks path-scoped but versioning is commit-scoped.
 In practice, this means:
 
-- `elastic/github-actions/project-assigner@v2.1.1` uses the `project-assigner/` directory from
-  the repo tag `v2.1.1`
-- `elastic/github-actions/my-action@v1.0.0` would use the `my-action/`
-  directory from the repo tag `v1.0.0`
+- `elastic/github-actions/my-action@v1.0.0` uses the `my-action/` directory from
+  the repo tag `v1.0.0`
+- `elastic/github-actions/another-action@v3.0.0` would use the `another-action/`
+  directory from the repo tag `v3.0.0`
 - SHA pinning is supported and recommended when consumers want an immutable reference
 
 Different actions in this repository can be referenced at different SHAs if needed:
@@ -48,12 +47,12 @@ jobs:
   first_job:
     runs-on: ubuntu-latest
     steps:
-      - uses: elastic/github-actions/project-assigner@abc123
+      - uses: elastic/github-actions/action-one@abc123
 
   second_job:
     runs-on: ubuntu-latest
     steps:
-      - uses: elastic/github-actions/my-action@def456
+      - uses: elastic/github-actions/action-two@def456
 ```
 
 ## Development

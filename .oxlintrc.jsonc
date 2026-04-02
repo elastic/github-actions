@@ -8,5 +8,5 @@
     "correctness": "error",
     "suspicious": "warn"
   },
-  "ignorePatterns": ["node_modules/**", "coverage/**", "project-assigner/**", "*/dist/**"]
+  "ignorePatterns": ["node_modules/**", "coverage/**", "*/dist/**"]
 }
