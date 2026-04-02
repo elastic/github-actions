@@ -1,6 +1,6 @@
 {
   "name": "elastic-github-actions",
-  "version": "3.0.0",
+  "version": "2.1.2",
   "description": "Elastic Organization GitHub Actions",
   "repository": {
     "type": "git",

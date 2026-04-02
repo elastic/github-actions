@@ -108,6 +108,8 @@ directly from the repository ref they pin to. In this repository, `dist/` is tre
 artifact:
 
 - Pull requests are reviewed as source changes and must build successfully.
+- Trusted same-repo `release/**` pull requests that bump the root `package.json` version auto-update
+  committed `dist/` output on each push.
 - `master` auto-updates committed `dist/` output after merges.
 - Releases rebuild and fail if a fresh build would change committed output, so release tags always
   point to commits with up-to-date `dist/`.
@@ -119,4 +121,17 @@ The build treats any **top-level directory** that contains an `action.yml` as an
 
 ### Release tags and floating majors
 
-Releases are created via the `Release` workflow with a `version` like `v3.0.0`. In addition to creating the `vX.Y.Z` tag and GitHub release, it **force-updates** the floating major tag (for example `v3`).
+The root [`package.json`](package.json) version is the release source of truth for this repository.
+
+To prepare a release:
+
+1. Open a same-repo pull request with a branch in the form of `release/**` that bumps the root `package.json` `version` field.
+2. Let CI auto-update committed `dist/` output on the release pull request as you push changes.
+3. Merge the pull request to `master`.
+
+After merge, the release workflow:
+
+- reads the merged package version and creates the matching `vX.Y.Z` tag
+- generates release notes automatically with GitHub
+- uses [`.github/release.yml`](.github/release.yml) labels and categories to section the release page
+- force-updates the floating major tag (for example `v3`)

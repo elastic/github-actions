@@ -4,9 +4,19 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'package.json'
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
 
 concurrency:
-  group: update-dist-${{ github.ref }}
+  group: update-dist-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -14,14 +24,28 @@ permissions:
 
 jobs:
   update-dist:
-    if: github.actor != 'github-actions[bot]'
+    if: >-
+      ${{
+        github.actor != 'github-actions[bot]' &&
+        (
+          (
+            github.event_name == 'push' &&
+            github.event.repository.fork == false
+          ) ||
+          (
+            github.event_name == 'pull_request' &&
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            startsWith(github.head_ref, 'release/') &&
+            contains(fromJSON('["MEMBER", "OWNER"]'), github.event.pull_request.author_association)
+          )
+        )
+      }}
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: master
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || 'master' }}
           fetch-depth: 0
 
       - name: Setup pnpm
@@ -41,11 +65,30 @@ jobs:
 
       - name: Commit updated dist output
         env:
-          GIT_AUTHOR_NAME: github-actions[bot]
+          BASE_REF: ${{ github.event.pull_request.base.ref || '' }}
+          HEAD_REF: ${{ github.head_ref || '' }}
+          EVENT_NAME: ${{ github.event_name }}
           GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
-          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_AUTHOR_NAME: github-actions[bot]
           GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
         run: |
+          read_package_version_from_ref() {
+            git show "$1:package.json" | jq -r '.version'
+          }
+
+          if [ "${EVENT_NAME}" = 'pull_request' ]; then
+            git fetch origin "${BASE_REF}"
+
+            VERSION="$(read_package_version_from_ref 'HEAD')"
+            BASE_VERSION="$(read_package_version_from_ref "origin/${BASE_REF}")"
+
+            if [ "${VERSION}" = "${BASE_VERSION}" ]; then
+              echo "Pull request does not bump package.json version. Skipping dist update."
+              exit 0
+            fi
+          fi
+
           if git diff --quiet; then
             echo "No dist updates to commit."
             exit 0
@@ -61,4 +104,9 @@ jobs:
 
           git diff --name-only -z | xargs -0 git add --
           git commit -m "build: update dist for ${SOURCE_SHA}"
-          git push origin HEAD:master
+
+          if [ "${EVENT_NAME}" = 'pull_request' ]; then
+            git push origin "HEAD:${HEAD_REF}"
+          else
+            git push origin HEAD:master
+          fi
