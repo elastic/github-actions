@@ -36,7 +36,7 @@ jobs:
             github.event_name == 'pull_request' &&
             github.event.pull_request.head.repo.full_name == github.repository &&
             startsWith(github.head_ref, 'release/') &&
-            contains(fromJSON('["MEMBER"]'), github.event.pull_request.author_association)
+            contains(fromJSON('["MEMBER", "OWNER"]'), github.event.pull_request.author_association)
           )
         )
       }}
@@ -74,7 +74,7 @@ jobs:
           GIT_COMMITTER_NAME: github-actions[bot]
         run: |
           read_package_version_from_ref() {
-            git show "$1:package.json" | node --print "JSON.parse(require('node:fs').readFileSync(0, 'utf8')).version"
+            git show "$1:package.json" | jq -r '.version'
           }
 
           if [ "${EVENT_NAME}" = 'pull_request' ]; then
