@@ -9,7 +9,6 @@ const MULTILINE_METADATA = 'purpose=claude-review\nowner=security-ai';
 const SINGLE_LINE_METADATA = 'purpose=claude-review';
 
 const mockCore = {
-  saveState: vi.fn(),
   setFailed: vi.fn(),
   setOutput: vi.fn(),
   setSecret: vi.fn(),
@@ -44,30 +43,33 @@ async function loadMainRun() {
   return module.run;
 }
 
-async function loadPostRun() {
-  const module = await import('./post');
-  return module.run;
-}
-
 const actionEnvKeys = [
+  'INPUT_OPERATION',
   'INPUT_BASE-URL',
   'INPUT_MASTER-KEY',
   'INPUT_MODELS',
   'INPUT_KEY-TTL',
   'INPUT_MAX-BUDGET',
   'INPUT_METADATA',
-  'STATE_minted_api_key',
+  'INPUT_API-KEY',
 ];
 
 function setActionInput(name: string, value: string) {
   process.env[`INPUT_${name.toUpperCase()}`] = value;
 }
 
-function setDefaultActionInputs() {
+function setDefaultMintInputs() {
   setActionInput('base-url', BASE_URL);
   setActionInput('master-key', MASTER_KEY);
   setActionInput('models', MODEL);
   setActionInput('key-ttl', KEY_TTL);
+}
+
+function setDefaultRevokeInputs() {
+  setActionInput('operation', 'revoke');
+  setActionInput('base-url', BASE_URL);
+  setActionInput('master-key', MASTER_KEY);
+  setActionInput('api-key', MINTED_API_KEY);
 }
 
 describe('LiteLLM Token action', () => {
@@ -79,85 +81,96 @@ describe('LiteLLM Token action', () => {
       delete process.env[key];
     }
 
-    setDefaultActionInputs();
+    setDefaultMintInputs();
   });
 
-  it('mints a token, saves it for cleanup, and only exposes api_key output', async () => {
-    setActionInput('metadata', MULTILINE_METADATA);
+  describe('mint operation', () => {
+    it('mints a token and exposes api_key output', async () => {
+      setActionInput('metadata', MULTILINE_METADATA);
 
-    mockMintLiteLLMToken.mockResolvedValue(MINTED_API_KEY);
+      mockMintLiteLLMToken.mockResolvedValue(MINTED_API_KEY);
 
-    const run = await loadMainRun();
+      const run = await loadMainRun();
 
-    await run();
+      await run();
 
-    expect(mockCore.setSecret).toHaveBeenCalledWith(MASTER_KEY);
-    expect(mockCore.setSecret).toHaveBeenCalledWith(MINTED_API_KEY);
-    expect(mockCore.saveState).toHaveBeenCalledWith('minted_api_key', MINTED_API_KEY);
-    expect(mockCore.setOutput).toHaveBeenCalledTimes(1);
-    expect(mockCore.setOutput).toHaveBeenCalledWith('api_key', MINTED_API_KEY);
-    expect(mockMintLiteLLMToken).toHaveBeenCalledWith({
-      baseUrl: BASE_URL,
-      masterKey: MASTER_KEY,
-      keyTTL: KEY_TTL,
-      maxBudget: 5,
-      models: [MODEL],
-      metadata: { owner: 'security-ai', purpose: 'claude-review' },
+      expect(mockCore.setSecret).toHaveBeenCalledWith(MASTER_KEY);
+      expect(mockCore.setSecret).toHaveBeenCalledWith(MINTED_API_KEY);
+      expect(mockCore.setOutput).toHaveBeenCalledTimes(1);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('api_key', MINTED_API_KEY);
+      expect(mockMintLiteLLMToken).toHaveBeenCalledWith({
+        baseUrl: BASE_URL,
+        masterKey: MASTER_KEY,
+        keyTTL: KEY_TTL,
+        maxBudget: 5,
+        models: [MODEL],
+        metadata: { owner: 'security-ai', purpose: 'claude-review' },
+      });
+    });
+
+    it('accepts single-line metadata input', async () => {
+      setActionInput('metadata', SINGLE_LINE_METADATA);
+
+      mockMintLiteLLMToken.mockResolvedValue(MINTED_API_KEY);
+
+      const run = await loadMainRun();
+
+      await run();
+
+      expect(mockMintLiteLLMToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: { purpose: 'claude-review' },
+        }),
+      );
+    });
+
+    it('defaults to mint when operation is not set', async () => {
+      mockMintLiteLLMToken.mockResolvedValue(MINTED_API_KEY);
+
+      const run = await loadMainRun();
+
+      await run();
+
+      expect(mockMintLiteLLMToken).toHaveBeenCalled();
+      expect(mockRevokeLiteLLMToken).not.toHaveBeenCalled();
     });
   });
 
-  it('accepts single-line metadata input', async () => {
-    setActionInput('metadata', SINGLE_LINE_METADATA);
+  describe('revoke operation', () => {
+    it('revokes the provided api key', async () => {
+      setDefaultRevokeInputs();
 
-    mockMintLiteLLMToken.mockResolvedValue(MINTED_API_KEY);
+      const run = await loadMainRun();
 
-    const run = await loadMainRun();
+      await run();
 
-    await run();
-
-    expect(mockMintLiteLLMToken).toHaveBeenCalledWith(
-      expect.objectContaining({
-        metadata: { purpose: 'claude-review' },
-      }),
-    );
-  });
-
-  it('revokes the saved api key during post cleanup', async () => {
-    process.env.STATE_minted_api_key = MINTED_API_KEY;
-
-    const run = await loadPostRun();
-
-    await run();
-
-    expect(mockCore.setSecret).toHaveBeenCalledWith(MASTER_KEY);
-    expect(mockCore.setSecret).toHaveBeenCalledWith(MINTED_API_KEY);
-    expect(mockRevokeLiteLLMToken).toHaveBeenCalledWith({
-      baseUrl: BASE_URL,
-      masterKey: MASTER_KEY,
-      apiKey: MINTED_API_KEY,
+      expect(mockCore.setSecret).toHaveBeenCalledWith(MASTER_KEY);
+      expect(mockCore.setSecret).toHaveBeenCalledWith(MINTED_API_KEY);
+      expect(mockRevokeLiteLLMToken).toHaveBeenCalledWith({
+        baseUrl: BASE_URL,
+        masterKey: MASTER_KEY,
+        apiKey: MINTED_API_KEY,
+      });
+      expect(mockCore.setOutput).not.toHaveBeenCalled();
     });
   });
 
-  it('skips post cleanup when there is no saved api key', async () => {
-    const run = await loadPostRun();
+  describe('unknown operation', () => {
+    it('throws for an unrecognized operation', async () => {
+      setActionInput('operation', 'destroy');
 
-    await run();
+      const run = await loadMainRun();
 
-    expect(mockCore.setSecret).not.toHaveBeenCalled();
-    expect(mockRevokeLiteLLMToken).not.toHaveBeenCalled();
+      await expect(run()).rejects.toThrow();
+      expect(mockMintLiteLLMToken).not.toHaveBeenCalled();
+      expect(mockRevokeLiteLLMToken).not.toHaveBeenCalled();
+    });
   });
 
   it('does not auto-run the main entrypoint when imported in tests', async () => {
     await import('./index');
 
     expect(mockMintLiteLLMToken).not.toHaveBeenCalled();
-    expect(mockCore.setFailed).not.toHaveBeenCalled();
-  });
-
-  it('does not auto-run the post entrypoint when imported in tests', async () => {
-    await import('./post');
-
-    expect(mockRevokeLiteLLMToken).not.toHaveBeenCalled();
     expect(mockCore.setFailed).not.toHaveBeenCalled();
   });
 });

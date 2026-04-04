@@ -88,7 +88,7 @@ const mintFields = {
 };
 
 const revokeFields = {
-  apiKey: z.string().min(1, 'Saved LiteLLM api key is required for post cleanup.'),
+  apiKey: z.string().min(1, 'Input "api-key" is required for a revoke operation.'),
 };
 
 export const mintInputSchema = commonInputSchema.extend(mintFields);

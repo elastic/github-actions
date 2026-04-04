@@ -1,6 +1,10 @@
-name: 'LiteLLM Mint Token'
-description: 'Mint short-lived LiteLLM keys for GitHub workflows and revoke them automatically after the job'
+name: 'LiteLLM Token'
+description: 'Mint or revoke short-lived LiteLLM keys for GitHub workflows'
 inputs:
+  operation:
+    description: 'Operation to perform: mint or revoke'
+    required: false
+    default: 'mint'
   base-url:
     description: 'LiteLLM proxy base URL'
     required: true
@@ -9,7 +13,7 @@ inputs:
     required: true
   models:
     description: 'Comma separated models for mint operations'
-    required: true
+    required: false
   key-ttl:
     description: 'TTL for minted keys, for example 15m or 1h'
     required: false
@@ -21,10 +25,12 @@ inputs:
   metadata:
     description: 'Optional newline-delimited key=value metadata entries merged into the LiteLLM metadata payload. The Github repo, PR, workflow and actor are already automatically added.'
     required: false
+  api-key:
+    description: 'The LiteLLM API key to revoke (required for revoke operation)'
+    required: false
 outputs:
   api_key:
-    description: 'The minted LiteLLM API key'
+    description: 'The minted LiteLLM API key (only set for mint operation)'
 runs:
   using: 'node24'
   main: 'dist/index.js'
-  post: 'dist/post.js'
