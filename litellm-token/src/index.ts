@@ -37,7 +37,6 @@ async function runMint() {
   const inputs = parsedInputs.data;
   const apiKey = await mintLiteLLMToken(inputs);
 
-  core.setSecret(apiKey);
   core.setOutput('api_key', apiKey);
   core.info('Minted LiteLLM token.');
 }
