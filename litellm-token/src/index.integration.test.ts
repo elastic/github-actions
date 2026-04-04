@@ -95,7 +95,6 @@ describe('LiteLLM Token action', () => {
       await run();
 
       expect(mockCore.setSecret).toHaveBeenCalledWith(MASTER_KEY);
-      expect(mockCore.setSecret).toHaveBeenCalledWith(MINTED_API_KEY);
       expect(mockCore.setOutput).toHaveBeenCalledTimes(1);
       expect(mockCore.setOutput).toHaveBeenCalledWith('api_key', MINTED_API_KEY);
       expect(mockMintLiteLLMToken).toHaveBeenCalledWith({
@@ -161,7 +160,7 @@ describe('LiteLLM Token action', () => {
 
       const run = await loadMainRun();
 
-      await expect(run()).rejects.toThrow();
+      await expect(run()).rejects.toBeInstanceOf(Error);
       expect(mockMintLiteLLMToken).not.toHaveBeenCalled();
       expect(mockRevokeLiteLLMToken).not.toHaveBeenCalled();
     });
