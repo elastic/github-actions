@@ -114,9 +114,8 @@ directly from the repository ref they pin to. In this repository, `dist/` is tre
 artifact:
 
 - Pull requests are reviewed as source changes and must build successfully.
-- Trusted same-repo `release/**` pull requests that bump the root `package.json` version auto-update
+- Trusted same-repo `release/**` pull requests that bump the root `package.json` version will auto-update
   committed `dist/` output on each push.
-- `master` auto-updates committed `dist/` output after merges.
 - Releases rebuild and fail if a fresh build would change committed output, so release tags always
   point to commits with up-to-date `dist/`.
 
