@@ -5,10 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('node:fs');
 
 const { getActionDirs, runBuildActions } = await import('./build-actions');
+type RunBuildActionsOptions = Parameters<typeof runBuildActions>[0];
+type BuildLog = NonNullable<RunBuildActionsOptions['log']>;
+type BuildSpawn = NonNullable<RunBuildActionsOptions['spawn']>;
 
 const rootDir = '/repo';
-const log = vi.fn();
-const error = vi.fn();
+const log = vi.fn<BuildLog>();
+const error = vi.fn<BuildLog>();
 
 function seedFs(files: Record<string, string>): void {
   vol.fromJSON(files, rootDir);
@@ -53,7 +56,7 @@ describe('runBuildActions', () => {
 
   it('builds the main action bundle', () => {
     const actionDir = path.join(rootDir, 'my-action');
-    const spawn = vi.fn((_, args: string[], options: { cwd: string }) => {
+    const spawn = vi.fn<BuildSpawn>((_, args, options) => {
       const outputDir = path.join(options.cwd, args[args.indexOf('--out') + 1]!);
       seedFs({
         [path.join(outputDir, 'index.js')]: 'module.exports = "main";',
@@ -77,7 +80,7 @@ describe('runBuildActions', () => {
 
   it('builds optional pre and post bundles to flat dist files', () => {
     const actionDir = path.join(rootDir, 'my-action');
-    const spawn = vi.fn((_, args: string[], options: { cwd: string }) => {
+    const spawn = vi.fn<BuildSpawn>((_, args, options) => {
       const outputDir = path.join(options.cwd, args[args.indexOf('--out') + 1]!);
       const entryFile = args[2];
       const writes: Record<string, string> = {
