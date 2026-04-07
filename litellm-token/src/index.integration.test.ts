@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+type ActionsCore = typeof import('@actions/core');
+type LiteLLMTokenModule = typeof import('./litellmToken');
+
 const BASE_URL = 'https://litellm.example.com';
 const MASTER_KEY = 'sk-master';
 const MODEL = 'llm-gateway/claude-opus-4-5';
@@ -9,15 +12,15 @@ const MULTILINE_METADATA = 'purpose=claude-review\nowner=security-ai';
 const SINGLE_LINE_METADATA = 'purpose=claude-review';
 
 const mockCore = {
-  setFailed: vi.fn(),
-  setOutput: vi.fn(),
-  setSecret: vi.fn(),
-  info: vi.fn(),
-  warning: vi.fn(),
+  setFailed: vi.fn<ActionsCore['setFailed']>(),
+  setOutput: vi.fn<ActionsCore['setOutput']>(),
+  setSecret: vi.fn<ActionsCore['setSecret']>(),
+  info: vi.fn<ActionsCore['info']>(),
+  warning: vi.fn<ActionsCore['warning']>(),
 };
 
-const mockMintLiteLLMToken = vi.fn();
-const mockRevokeLiteLLMToken = vi.fn();
+const mockMintLiteLLMToken = vi.fn<LiteLLMTokenModule['mintLiteLLMToken']>();
+const mockRevokeLiteLLMToken = vi.fn<LiteLLMTokenModule['revokeLiteLLMToken']>();
 
 vi.mock(import('@actions/core'), async (importOriginal) => {
   const actual = await importOriginal();
