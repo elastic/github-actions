@@ -11,7 +11,7 @@
 
 ## Validation
 
-- When changing a action or the build/test setup, ALWAYS run the checks from the repo root: `pnpm format`, `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
+- When changing a action or the build/test setup, ALWAYS run the checks from the repo root: `pnpm checks`.
 - All checks MUST pass before any changes are considered complete.
 
 ## Contribution Hygiene
