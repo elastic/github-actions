@@ -76,4 +76,8 @@ gh pr create \
   --repo elastic/github-actions \
   --base master \
   --head "${BRANCH_NAME}" \
-  --title "Release v${VERSION}"
+  --draft \
+  --title "Release v${VERSION}" \
+  --body "" \
+  --label "skip-for-release-notes" \
+  --assignee "@me"
