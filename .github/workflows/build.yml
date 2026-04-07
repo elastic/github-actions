@@ -63,4 +63,13 @@ jobs:
               startsWith(github.head_ref, 'release/')
             )
           }}
-        run: git diff --exit-code
+        run: |
+          mapfile -t CHANGED_FILES < <(git ls-files --modified --deleted --others --exclude-standard)
+
+          if [ "${#CHANGED_FILES[@]}" -eq 0 ]; then
+            exit 0
+          fi
+
+          echo "::error::Committed build output is stale. Rebuild and commit generated files." >&2
+          printf '%s\n' "${CHANGED_FILES[@]}" >&2
+          exit 1
