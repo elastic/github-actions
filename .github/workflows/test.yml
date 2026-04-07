@@ -4,9 +4,6 @@ on:
   pull_request:
   merge_group:
     types: [checks_requested]
-  push:
-    branches:
-      - master
   workflow_call:
     inputs:
       ref:
