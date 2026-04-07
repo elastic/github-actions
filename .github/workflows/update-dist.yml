@@ -89,20 +89,24 @@ jobs:
             fi
           fi
 
-          if git diff --quiet; then
+          mapfile -t CHANGED_FILES < <(git ls-files --modified --deleted --others --exclude-standard)
+
+          if [ "${#CHANGED_FILES[@]}" -eq 0 ]; then
             echo "No dist updates to commit."
             exit 0
           fi
 
           SOURCE_SHA="$(git rev-parse --short=12 HEAD)"
 
-          if git diff --name-only | grep -Ev '^[^/]+/dist/' >/dev/null; then
-            echo "::error::Refusing to auto-commit changes outside action dist/ output." >&2
-            git --no-pager diff --name-only >&2 || true
-            exit 1
-          fi
+          for changed_file in "${CHANGED_FILES[@]}"; do
+            if [[ ! "${changed_file}" =~ ^[^/]+/dist/ ]]; then
+              echo "::error::Refusing to auto-commit changes outside action dist/ output." >&2
+              printf '%s\n' "${CHANGED_FILES[@]}" >&2
+              exit 1
+            fi
+          done
 
-          git diff --name-only -z | xargs -0 git add --
+          git add -- "${CHANGED_FILES[@]}"
           git commit -m "build: update dist for ${SOURCE_SHA}"
 
           if [ "${EVENT_NAME}" = 'pull_request' ]; then
