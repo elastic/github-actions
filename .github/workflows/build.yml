@@ -53,14 +53,50 @@ jobs:
       - name: Build actions
         run: pnpm build
 
-      - name: Verify committed build output
-        if: >-
-          ${{
-            inputs.verify_dist ||
-            (
-              github.event_name == 'pull_request' &&
-              github.event.pull_request.head.repo.full_name == github.repository &&
-              startsWith(github.head_ref, 'release/')
-            )
-          }}
-        run: git diff --exit-code
+      - name: Should verify dist gate
+        id: should_verify_dist
+        env:
+          VERIFY_DIST_INPUT: ${{ inputs.verify_dist }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name || '' }}
+          HEAD_REF: ${{ github.head_ref || '' }}
+          MERGE_GROUP_BASE_REF: ${{ github.event.merge_group.base_ref || '' }}
+        run: |
+          read_package_version_from_ref() {
+            git show "$1:package.json" | jq -r '.version'
+          }
+
+          should_verify=false
+
+          if [ "${VERIFY_DIST_INPUT}" = 'true' ]; then
+            should_verify=true
+          elif [ "${EVENT_NAME}" = 'pull_request' ] &&
+            [ "${HEAD_REPO}" = "${GITHUB_REPOSITORY}" ] &&
+            [[ "${HEAD_REF}" == release/* ]]; then
+            should_verify=true
+          elif [ "${EVENT_NAME}" = 'merge_group' ] &&
+            [ "${MERGE_GROUP_BASE_REF}" = 'refs/heads/master' ]; then
+            git fetch origin master
+
+            HEAD_VERSION="$(read_package_version_from_ref 'HEAD')"
+            BASE_VERSION="$(read_package_version_from_ref 'origin/master')"
+
+            if [ "${HEAD_VERSION}" != "${BASE_VERSION}" ]; then
+              should_verify=true
+            fi
+          fi
+
+          echo "should_verify=${should_verify}" >> "${GITHUB_OUTPUT}"
+
+      - name: Verify committed dist output
+        if: ${{ steps.should_verify_dist.outputs.should_verify == 'true' }}
+        run: |
+          mapfile -t CHANGED_FILES < <(git ls-files --modified --deleted --others --exclude-standard)
+
+          if [ "${#CHANGED_FILES[@]}" -eq 0 ]; then
+            exit 0
+          fi
+
+          echo "::error::Committed dist output is stale. Run `pnpm build` and commit generated files." >&2
+          printf '%s\n' "${CHANGED_FILES[@]}" >&2
+          exit 1

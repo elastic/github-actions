@@ -114,9 +114,7 @@ directly from the repository ref they pin to. In this repository, `dist/` is tre
 artifact:
 
 - Pull requests are reviewed as source changes and must build successfully.
-- Trusted same-repo `release/**` pull requests that bump the root `package.json` version auto-update
-  committed `dist/` output on each push.
-- `master` auto-updates committed `dist/` output after merges.
+- Release PRs must include up to date, committed `dist/` output before merging.
 - Releases rebuild and fail if a fresh build would change committed output, so release tags always
   point to commits with up-to-date `dist/`.
 
@@ -147,15 +145,20 @@ runs:
 
 The root [`package.json`](package.json) version is the release source of truth for this repository.
 
-To prepare a release:
+Use the release helper script to create a same-repo `release/**` branch and open the release pull
+request:
 
-1. Open a same-repo pull request with a branch in the form of `release/**` that bumps the root `package.json` `version` field.
-2. Let CI auto-update committed `dist/` output on the release pull request as you push changes.
-3. Merge the pull request to `master`.
+```bash
+bash scripts/create-release-pr.sh 2.1.3
+```
 
-After merge, the release workflow:
+The helper finds the remote that points at `elastic/github-actions`, creates `release/v<version>`
+from that remote's `master`, updates the root `package.json` version, rebuilds committed `dist/`
+output, pushes the branch, and opens a pull request titled `Release v<version>`.
+
+After merge, the `publish-release` workflow:
 
 - reads the merged package version and creates the matching `vX.Y.Z` tag
 - generates release notes automatically with GitHub
-- uses [`.github/release.yml`](.github/release.yml) labels and categories to section the release page
+- uses [`.github/release.yml`](.github/release.yml) labels and categories to section the release notes
 - force-updates the floating major tag (for example `v3`)
