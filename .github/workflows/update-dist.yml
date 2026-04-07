@@ -29,6 +29,18 @@ jobs:
       }}
     runs-on: ubuntu-latest
     steps:
+      - name: Debug PR trust context
+        run: |
+          echo "actor=${{ github.actor }}"
+          echo "head_repo=${{ github.event.pull_request.head.repo.full_name }}"
+          echo "repository=${{ github.repository }}"
+          echo "head_ref=${{ github.head_ref }}"
+          echo "author_association=${{ github.event.pull_request.author_association }}"
+          echo "draft=${{ github.event.pull_request.draft }}"
+          echo "same_repo_gate=${{ github.event.pull_request.head.repo.full_name == github.repository }}"
+          echo "release_ref_gate=${{ startsWith(github.head_ref, 'release/') }}"
+          echo "association_gate=${{ contains(fromJSON('["MEMBER", "OWNER"]'), github.event.pull_request.author_association) }}"
+
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
