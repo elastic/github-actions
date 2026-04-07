@@ -78,4 +78,6 @@ gh pr create \
   --head "${BRANCH_NAME}" \
   --draft \
   --title "Release v${VERSION}" \
-  --body ""
+  --body "" \
+  --label "skip-for-release-notes" \
+  --assignee "@me"
