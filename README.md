@@ -114,8 +114,7 @@ directly from the repository ref they pin to. In this repository, `dist/` is tre
 artifact:
 
 - Pull requests are reviewed as source changes and must build successfully.
-- Trusted same-repo `release/**` pull requests that bump the root `package.json` version will auto-update
-  committed `dist/` output on each push.
+- Release PRs must include up to date, committed `dist/` output before merging.
 - Releases rebuild and fail if a fresh build would change committed output, so release tags always
   point to commits with up-to-date `dist/`.
 
@@ -154,8 +153,8 @@ bash scripts/create-release-pr.sh 2.1.3
 ```
 
 The helper finds the remote that points at `elastic/github-actions`, creates `release/v<version>`
-from that remote's `master`, updates the root `package.json` version, pushes the branch, and opens a
-pull request titled `Release v<version>`.
+from that remote's `master`, updates the root `package.json` version, rebuilds committed `dist/`
+output, pushes the branch, and opens a pull request titled `Release v<version>`.
 
 After merge, the `publish-release` workflow:
 

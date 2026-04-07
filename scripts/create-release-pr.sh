@@ -67,8 +67,23 @@ fi
 git checkout -b "${BRANCH_NAME}" "${REMOTE_NAME}/master"
 
 npm pkg set version="${VERSION}"
+pnpm build
+mapfile -t CHANGED_FILES < <(git ls-files --modified --deleted --others --exclude-standard)
 
-git add package.json
+for changed_file in "${CHANGED_FILES[@]}"; do
+  if [ "${changed_file}" = "package.json" ]; then
+    continue
+  fi
+
+  if [[ "${changed_file}" =~ ^[^/]+/dist/ ]]; then
+    continue
+  fi
+
+  echo "Release preparation produced unexpected changes: ${changed_file}" >&2
+  exit 1
+done
+
+git add -- "${CHANGED_FILES[@]}"
 git commit -m "release: prepare v${VERSION}"
 git push -u "${REMOTE_NAME}" "${BRANCH_NAME}"
 
