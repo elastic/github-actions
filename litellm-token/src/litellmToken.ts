@@ -37,8 +37,8 @@ function buildMintRequestBody(inputs: MintInputs): JsonObject {
   };
 
   const mergedMetadata = {
-    ...getGitHubRuntimeMetadata(),
     ...(inputs.metadata ?? {}),
+    ...getGitHubRuntimeMetadata(),
   };
 
   if (Object.keys(mergedMetadata).length > 0) {
