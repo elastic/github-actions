@@ -8,5 +8,14 @@
     "correctness": "error",
     "suspicious": "warn"
   },
+  "rules": {
+    "vitest/expect-expect": [
+      "error",
+      {
+        // This allows custom assertion functions to be used without error that the test is missing an assertion.
+        "assertFunctionNames": ["expect*", "assert*"]
+      }
+    ]
+  },
   "ignorePatterns": ["node_modules/**", "coverage/**", "*/dist/**", "renovate.json"]
 }

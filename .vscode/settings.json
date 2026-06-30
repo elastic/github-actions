@@ -5,6 +5,11 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.oxc": "always"
   },
+  "oxc.enable.oxlint": true,
+  "oxc.requireConfig": true,
+  "oxc.configPath": ".oxlintrc.jsonc",
+  "oxc.path.oxlint": "node_modules/oxlint/bin/oxlint",
+  "oxc.lint.run": "onType",
   "[typescript]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
   }
