@@ -22,7 +22,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "@vercel/ncc": "^0.44.0",
     "memfs": "^4.57.3",
     "oxfmt": "^0.53.0",
