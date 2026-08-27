@@ -22,8 +22,8 @@ importers:
         specifier: ^25.9.3
         version: 25.9.4
       '@vercel/ncc':
-        specifier: ^0.44.0
-        version: 0.44.0
+        specifier: ^0.45.0
+        version: 0.45.0
       memfs:
         specifier: ^4.57.7
         version: 4.57.7(tslib@2.8.1)
@@ -871,8 +871,8 @@ packages:
   '@types/node@25.9.4':
     resolution: {integrity: sha512-dszCsrKb5U7ZsVZBWiHFklTloVl0mSEnWH/iZXfZUlI4rzCUnsvGmgqfuVRHL54ugE7/wRuxEIXRa2iMZ+BG6g==}
 
-  '@vercel/ncc@0.44.0':
-    resolution: {integrity: sha512-pHyI+bZokSgIscTKFSmpNk5vZzmOrb9RW0Vu4SRyqUvkJ0kgg3PzaZLLDVTFXhbUiCqg0/Eu8L4fKtgViA92kg==}
+  '@vercel/ncc@0.45.0':
+    resolution: {integrity: sha512-8zPi1yO2mHpoKTD+e+Bf0ZT3e+sWHSOyGapm9s7b5R0gxJi3CiFTqmeQiMEyu6ejrz2s09M8JkEoUaTWjBJPQQ==}
     hasBin: true
 
   '@vitest/expect@4.1.9':
@@ -1774,7 +1774,7 @@ snapshots:
     dependencies:
       undici-types: 7.24.6
 
-  '@vercel/ncc@0.44.0': {}
+  '@vercel/ncc@0.45.0': {}
 
   '@vitest/expect@4.1.9':
     dependencies:
