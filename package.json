@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
-    "@vercel/ncc": "^0.44.0",
+    "@vercel/ncc": "^0.45.0",
     "memfs": "^4.57.7",
     "oxfmt": "^0.55.0",
     "oxlint": "^1.70.0",
